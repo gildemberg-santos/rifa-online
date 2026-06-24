@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: rifa-online-backend
+    runtime: image
+    repo: https://github.com/gildemberg-santos/rifa-online
+    plan: starter
+    dockerfilePath: backend/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: rifaonline
+      - key: REDIS_URI
+        fromService:
+          type: redis
+          name: rifa-online-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ABACATEPAY_API_KEY
+        sync: false
+      - key: ABACATEPAY_WEBHOOK_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: LOG_FORMAT
+        value: json
+      - key: LOG_LEVEL
+        value: info
+
+  - type: web
+    name: rifa-online-frontend
+    runtime: static
+    repo: https://github.com/gildemberg-santos/rifa-online
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+
+redis:
+  - name: rifa-online-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
