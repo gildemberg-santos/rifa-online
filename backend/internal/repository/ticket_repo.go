@@ -176,6 +176,11 @@ func (r *TicketRepo) ReleaseReservations(ctx context.Context, ids []primitive.Ob
 	return err
 }
 
+func (r *TicketRepo) DeleteByRaffle(ctx context.Context, raffleID primitive.ObjectID) error {
+	_, err := r.coll.DeleteMany(ctx, bson.M{"raffleId": raffleID})
+	return err
+}
+
 func (r *TicketRepo) UpdateManyStatus(ctx context.Context, ids []primitive.ObjectID, status model.TicketStatus) error {
 	_, err := r.coll.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": ids}}, bson.M{
 		"$set": bson.M{"status": status},

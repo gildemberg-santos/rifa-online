@@ -42,6 +42,16 @@ onMounted(async () => {
   }
 })
 
+async function deleteRaffle(id: string) {
+  if (!confirm("Tem certeza que deseja excluir esta rifa? Esta ação não pode ser desfeita.")) return
+  try {
+    await api.delete(`/raffles/${id}`)
+    raffles.value = raffles.value.filter((r) => r.id !== id)
+  } catch (e: any) {
+    alert(e.message || "Erro ao excluir rifa")
+  }
+}
+
 async function drawRaffle(id: string) {
   if (!confirm("Realizar sorteio?")) return
   try {
@@ -240,6 +250,12 @@ function statusLabel(status: string) {
                     >
                       Resultado
                     </router-link>
+                    <button
+                      @click="deleteRaffle(raffle.id)"
+                      class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                    >
+                      Excluir
+                    </button>
                   </div>
                 </td>
               </tr>

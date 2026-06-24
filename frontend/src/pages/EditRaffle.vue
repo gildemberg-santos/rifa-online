@@ -25,7 +25,8 @@ onMounted(async () => {
     title.value = detail.raffle.title
     description.value = detail.raffle.description
     ticketPrice.value = detail.raffle.ticketPrice / 100
-    drawDate.value = detail.raffle.drawDate
+    const d = new Date(detail.raffle.drawDate)
+    drawDate.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
     stats.value = s
   } catch (e) {
     error.value = "Erro ao carregar rifa"

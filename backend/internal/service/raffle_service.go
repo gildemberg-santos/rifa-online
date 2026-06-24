@@ -148,6 +148,24 @@ func (s *RaffleService) Update(ctx context.Context, raffleID primitive.ObjectID,
 	return raffle, nil
 }
 
+func (s *RaffleService) Delete(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID) error {
+	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
+	if err != nil {
+		return ErrRaffleNotFound
+	}
+	if raffle.OrganizerID != organizerID {
+		return ErrNotRaffleOwner
+	}
+
+	if err := s.ticketRepo.DeleteByRaffle(ctx, raffleID); err != nil {
+		return err
+	}
+	if err := s.paymentRepo.DeleteByRaffle(ctx, raffleID); err != nil {
+		return err
+	}
+	return s.raffleRepo.Delete(ctx, raffleID)
+}
+
 func (s *RaffleService) Cancel(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID) error {
 	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
 	if err != nil {

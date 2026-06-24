@@ -144,6 +144,7 @@ func main() {
 				r.Post("/", raffleHandler.Create)
 				r.Put("/{id}", raffleHandler.Update)
 				r.Patch("/{id}/cancel", raffleHandler.Cancel)
+			r.Delete("/{id}", raffleHandler.Delete)
 			r.Post("/{id}/draw", raffleHandler.Draw)
 			r.Get("/my", raffleHandler.MyRaffles)
 			r.Get("/{id}/stats", raffleHandler.Stats)

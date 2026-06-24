@@ -152,6 +152,42 @@ func (h *RaffleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, raffle)
 }
 
+func (h *RaffleHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		writeError(w, "invalid raffle id", http.StatusBadRequest)
+		return
+	}
+
+	organizerOID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		writeError(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.raffleService.Delete(r.Context(), oid, organizerOID); err != nil {
+		if errors.Is(err, service.ErrRaffleNotFound) {
+			writeError(w, "raffle not found", http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, service.ErrNotRaffleOwner) {
+			writeError(w, "not the raffle owner", http.StatusForbidden)
+			return
+		}
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
 func (h *RaffleHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	if userID == "" {

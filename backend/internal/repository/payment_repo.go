@@ -122,6 +122,11 @@ func (r *PaymentRepo) Update(ctx context.Context, payment *model.Payment) error 
 	return err
 }
 
+func (r *PaymentRepo) DeleteByRaffle(ctx context.Context, raffleID primitive.ObjectID) error {
+	_, err := r.coll.DeleteMany(ctx, bson.M{"raffleId": raffleID})
+	return err
+}
+
 func (r *PaymentRepo) SumPaidByRaffle(ctx context.Context, raffleID primitive.ObjectID) (int64, error) {
 	match := bson.M{"$match": bson.M{"raffleId": raffleID, "status": model.PaymentStatusPaid}}
 	group := bson.M{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$amount"}}}
