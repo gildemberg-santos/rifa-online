@@ -247,6 +247,28 @@ func (h *RaffleHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, stats)
 }
 
+func (h *RaffleHandler) DashboardStats(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	oid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		writeError(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	stats, err := h.raffleService.GetDashboardStats(r.Context(), oid)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, stats)
+}
+
 func (h *RaffleHandler) Draw(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	if userID == "" {

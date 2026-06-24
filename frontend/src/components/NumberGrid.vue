@@ -9,21 +9,23 @@ const emit = defineEmits<{
 }>()
 
 function statusClass(status: string, number: number, selected: number[]): string {
-  if (selected.includes(number)) return "bg-indigo-600 text-white ring-2 ring-indigo-400"
+  if (selected.includes(number))
+    return "bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-300 ring-2 ring-indigo-400 scale-105 z-10"
   switch (status) {
     case "AVAILABLE":
-      return "bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer"
+      return "bg-white text-gray-700 border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm cursor-pointer"
     case "RESERVED":
-      return "bg-yellow-100 text-yellow-800"
+      return "bg-amber-50 text-amber-700 border border-amber-200 cursor-not-allowed"
     case "PAID":
-      return "bg-blue-100 text-blue-800"
+      return "bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-not-allowed"
     default:
-      return "bg-gray-100 text-gray-400"
+      return "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed"
   }
 }
 
-function isClickable(status: string): boolean {
-  return status === "AVAILABLE"
+function statusLabel(status: string): string | null {
+  if (status === "PAID") return "✓"
+  return null
 }
 </script>
 
@@ -32,11 +34,12 @@ function isClickable(status: string): boolean {
     <button
       v-for="ticket in tickets"
       :key="ticket.number"
-      :disabled="!isClickable(ticket.status)"
+      :disabled="ticket.status !== 'AVAILABLE'"
       :class="statusClass(ticket.status, ticket.number, selectedNumbers)"
-      class="aspect-square rounded-lg text-sm font-medium flex items-center justify-center transition-colors"
+      class="relative aspect-square rounded-xl text-sm font-semibold flex items-center justify-center transition-all duration-150"
       @click="emit('toggle', ticket.number)"
     >
+      <span v-if="statusLabel(ticket.status)" class="absolute top-0.5 right-0.5 text-[10px]">{{ statusLabel(ticket.status) }}</span>
       {{ ticket.number }}
     </button>
   </div>

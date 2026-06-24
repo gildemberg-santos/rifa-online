@@ -144,9 +144,9 @@ func main() {
 				r.Post("/", raffleHandler.Create)
 				r.Put("/{id}", raffleHandler.Update)
 				r.Patch("/{id}/cancel", raffleHandler.Cancel)
-				r.Post("/{id}/draw", raffleHandler.Draw)
-				r.Get("/my", raffleHandler.MyRaffles)
-				r.Get("/{id}/stats", raffleHandler.Stats)
+			r.Post("/{id}/draw", raffleHandler.Draw)
+			r.Get("/my", raffleHandler.MyRaffles)
+			r.Get("/{id}/stats", raffleHandler.Stats)
 			})
 
 			r.Group(func(r chi.Router) {
@@ -166,6 +166,11 @@ func main() {
 		})
 
 		r.Post("/webhooks/infinitepay", webhookHandler.HandleInfinitePay)
+
+		r.Route("/dashboard", func(r chi.Router) {
+			r.Use(authMw)
+			r.Get("/stats", raffleHandler.DashboardStats)
+		})
 
 		r.Route("/me", func(r chi.Router) {
 			r.Use(authMw)

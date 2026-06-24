@@ -204,6 +204,67 @@ func (s *RaffleService) GetStats(ctx context.Context, raffleID primitive.ObjectI
 	}, nil
 }
 
+type DashboardStats struct {
+	TotalRaffles         int     `json:"totalRaffles"`
+	ActiveRaffles        int     `json:"activeRaffles"`
+	DrawnRaffles         int     `json:"drawnRaffles"`
+	CancelledRaffles     int     `json:"cancelledRaffles"`
+	TotalSoldTickets     int     `json:"totalSoldTickets"`
+	TotalRevenue         int64   `json:"totalRevenue"`
+	TotalReservedTickets int     `json:"totalReservedTickets"`
+	TotalMaxNumbers      int     `json:"totalMaxNumbers"`
+	TotalAvailableTickets int    `json:"totalAvailableTickets"`
+}
+
+func (s *RaffleService) GetDashboardStats(ctx context.Context, organizerID primitive.ObjectID) (*DashboardStats, error) {
+	raffles, err := s.raffleRepo.FindByOrganizer(ctx, organizerID)
+	if err != nil {
+		return nil, err
+	}
+
+	stats := &DashboardStats{
+		TotalRaffles: len(raffles),
+	}
+
+	for _, r := range raffles {
+		switch r.Status {
+		case model.RaffleStatusActive:
+			stats.ActiveRaffles++
+		case model.RaffleStatusDrawn:
+			stats.DrawnRaffles++
+		case model.RaffleStatusCancelled:
+			stats.CancelledRaffles++
+		}
+
+		stats.TotalMaxNumbers += r.MaxNumbers
+
+		soldCount, err := s.ticketRepo.CountByRaffleAndStatus(ctx, r.ID, model.TicketStatusPaid)
+		if err != nil {
+			return nil, err
+		}
+		stats.TotalSoldTickets += int(soldCount)
+
+		reservedCount, err := s.ticketRepo.CountByRaffleAndStatus(ctx, r.ID, model.TicketStatusReserved)
+		if err != nil {
+			return nil, err
+		}
+		stats.TotalReservedTickets += int(reservedCount)
+
+		revenue, err := s.paymentRepo.SumPaidByRaffle(ctx, r.ID)
+		if err != nil {
+			return nil, err
+		}
+		stats.TotalRevenue += revenue
+	}
+
+	stats.TotalAvailableTickets = stats.TotalMaxNumbers - stats.TotalSoldTickets - stats.TotalReservedTickets
+	if stats.TotalAvailableTickets < 0 {
+		stats.TotalAvailableTickets = 0
+	}
+
+	return stats, nil
+}
+
 type DrawResult struct {
 	WinnerNumber int            `json:"winnerNumber"`
 	Raffle       *model.Raffle `json:"raffle"`
