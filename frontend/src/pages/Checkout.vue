@@ -11,7 +11,6 @@ const numbers = computed(() =>
 )
 
 const buyerName = ref("")
-const buyerEmail = ref("")
 const buyerPhone = ref("")
 const loading = ref(false)
 const error = ref("")
@@ -39,7 +38,7 @@ function isValidPhone(phone: string): boolean {
 }
 
 async function submit() {
-  if (!buyerName.value || !buyerEmail.value || !isValidPhone(buyerPhone.value)) return
+  if (!buyerName.value || !isValidPhone(buyerPhone.value)) return
   loading.value = true
   error.value = ""
 
@@ -47,7 +46,7 @@ async function submit() {
     const result = await api.post<{ checkoutUrl: string }>(`/raffles/${raffleId}/checkout`, {
       numbers: numbers.value,
       buyerName: buyerName.value,
-      buyerEmail: buyerEmail.value,
+      buyerEmail: "",
       buyerPhone: buyerPhone.value.replace(/\D/g, ""),
     })
     window.location.href = result.checkoutUrl
@@ -76,16 +75,6 @@ async function submit() {
           <input
             v-model="buyerName"
             type="text"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input
-            v-model="buyerEmail"
-            type="email"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />

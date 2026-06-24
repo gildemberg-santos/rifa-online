@@ -48,8 +48,8 @@ func (h *PaymentHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "at least one number is required", http.StatusBadRequest)
 		return
 	}
-	if req.BuyerName == "" || req.BuyerEmail == "" || req.BuyerPhone == "" {
-		writeError(w, "buyer name, email and phone are required", http.StatusBadRequest)
+	if req.BuyerName == "" || req.BuyerPhone == "" {
+		writeError(w, "buyer name and phone are required", http.StatusBadRequest)
 		return
 	}
 
