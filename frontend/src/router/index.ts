@@ -8,6 +8,7 @@ const router = createRouter({
       path: "/",
       name: "home",
       component: Home,
+      meta: { requiresAuth: true },
     },
     {
       path: "/raffles/:id",
@@ -23,6 +24,7 @@ const router = createRouter({
       path: "/raffles/:id/result",
       name: "raffle-result",
       component: () => import("../pages/RaffleResult.vue"),
+      meta: { requiresAuth: true },
     },
     {
       path: "/payment/success",
