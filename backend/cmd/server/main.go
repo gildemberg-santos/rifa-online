@@ -1,0 +1,224 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/user/rifa-online/internal/config"
+	"github.com/user/rifa-online/internal/handler"
+	"github.com/user/rifa-online/internal/middleware"
+	"github.com/user/rifa-online/internal/repository"
+	"github.com/user/rifa-online/internal/service"
+	"github.com/user/rifa-online/pkg/abacatepay"
+)
+
+func main() {
+	cfg := config.Load()
+
+	var logHandler slog.Handler
+	opts := &slog.HandlerOptions{Level: cfg.LogLevel}
+	if cfg.LogFormat == "json" {
+		logHandler = slog.NewJSONHandler(os.Stdout, opts)
+	} else {
+		logHandler = slog.NewTextHandler(os.Stdout, opts)
+	}
+	logger := slog.New(logHandler)
+	slog.SetDefault(logger)
+
+	logger.Info("starting server", "port", cfg.Port, "log_format", cfg.LogFormat, "log_level", cfg.LogLevel)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.MongoURI))
+	if err != nil {
+		logger.Error("failed to connect to mongodb", "error", err)
+		os.Exit(1)
+	}
+	defer mongoClient.Disconnect(context.Background())
+
+	optsRedis, err := redis.ParseURL(cfg.RedisURI)
+	if err != nil {
+		logger.Error("failed to parse redis url", "error", err)
+		os.Exit(1)
+	}
+	redisClient := redis.NewClient(optsRedis)
+	defer redisClient.Close()
+
+	db := mongoClient.Database(cfg.MongoDBName)
+
+	userRepo := repository.NewUserRepo(db)
+	raffleRepo := repository.NewRaffleRepo(db)
+	ticketRepo := repository.NewTicketRepo(db)
+	paymentRepo := repository.NewPaymentRepo(db)
+	webhookRepo := repository.NewWebhookRepo(db)
+
+	if err := userRepo.Init(ctx); err != nil {
+		logger.Error("failed to init user repo", "error", err)
+		os.Exit(1)
+	}
+	if err := raffleRepo.Init(ctx); err != nil {
+		logger.Error("failed to init raffle repo", "error", err)
+		os.Exit(1)
+	}
+	if err := ticketRepo.Init(ctx); err != nil {
+		logger.Error("failed to init ticket repo", "error", err)
+		os.Exit(1)
+	}
+	if err := paymentRepo.Init(ctx); err != nil {
+		logger.Error("failed to init payment repo", "error", err)
+		os.Exit(1)
+	}
+	if err := webhookRepo.Init(ctx); err != nil {
+		logger.Error("failed to init webhook repo", "error", err)
+		os.Exit(1)
+	}
+
+	authService := service.NewAuthService(userRepo, cfg)
+	authHandler := handler.NewAuthHandler(authService)
+
+	abacateClient := abacatepay.NewClient(cfg.AbacatepayAPIKey)
+
+	raffleService := service.NewRaffleService(raffleRepo, ticketRepo, paymentRepo, abacateClient)
+	paymentService := service.NewPaymentService(raffleRepo, ticketRepo, paymentRepo, abacateClient, redisClient, cfg)
+
+	raffleHandler := handler.NewRaffleHandler(raffleService)
+	paymentHandler := handler.NewPaymentHandler(paymentService, paymentRepo, ticketRepo)
+	webhookHandler := handler.NewWebhookHandler(paymentRepo, ticketRepo, webhookRepo, cfg, logger)
+
+	authMw := middleware.Auth(cfg)
+
+	r := chi.NewRouter()
+
+	r.Use(middleware.StructuredLogger(logger))
+	r.Use(chimw.Recoverer)
+	r.Use(chimw.RequestID)
+	r.Use(chimw.RealIP)
+	r.Use(chimw.Timeout(30 * time.Second))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{cfg.FrontendURL},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", authHandler.Register)
+			r.Post("/login", authHandler.Login)
+			r.Post("/refresh", authHandler.Refresh)
+		})
+
+		r.Route("/raffles", func(r chi.Router) {
+			r.Get("/", raffleHandler.List)
+			r.Get("/{id}", raffleHandler.GetDetail)
+
+			r.Group(func(r chi.Router) {
+				r.Use(authMw)
+				r.Post("/", raffleHandler.Create)
+				r.Put("/{id}", raffleHandler.Update)
+				r.Patch("/{id}/cancel", raffleHandler.Cancel)
+				r.Post("/{id}/draw", raffleHandler.Draw)
+				r.Get("/my", raffleHandler.MyRaffles)
+				r.Get("/{id}/stats", raffleHandler.Stats)
+			})
+
+			r.Group(func(r chi.Router) {
+				r.Post("/{id}/checkout", paymentHandler.Checkout)
+			})
+		})
+
+		r.Route("/payments", func(r chi.Router) {
+			r.Get("/my", paymentHandler.MyPayments)
+			r.Get("/{id}", paymentHandler.GetPayment)
+			r.Get("/my/tickets", paymentHandler.MyTickets)
+
+			r.Group(func(r chi.Router) {
+				r.Use(authMw)
+				r.Post("/{id}/confirm", paymentHandler.ConfirmPayment)
+			})
+		})
+
+		r.Post("/webhooks/abacatepay", webhookHandler.HandleAbacatePay)
+	})
+
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+
+		checks := map[string]string{
+			"server": "ok",
+		}
+
+		if err := mongoClient.Ping(ctx, nil); err != nil {
+			checks["mongodb"] = fmt.Sprintf("error: %v", err)
+		} else {
+			checks["mongodb"] = "ok"
+		}
+
+		if err := redisClient.Ping(ctx).Err(); err != nil {
+			checks["redis"] = fmt.Sprintf("error: %v", err)
+		} else {
+			checks["redis"] = "ok"
+		}
+
+		status := http.StatusOK
+		for _, v := range checks {
+			if v != "ok" {
+				status = http.StatusServiceUnavailable
+				break
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		json.NewEncoder(w).Encode(checks)
+	})
+
+	addr := fmt.Sprintf(":%d", cfg.Port)
+	server := &http.Server{
+		Addr:         addr,
+		Handler:      r,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	go func() {
+		logger.Info("server starting", "addr", addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	logger.Info("shutting down server...")
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("server forced shutdown", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("server stopped")
+}

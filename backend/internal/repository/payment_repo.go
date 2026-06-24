@@ -1,0 +1,118 @@
+package repository
+
+import (
+	"context"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/user/rifa-online/internal/model"
+)
+
+type PaymentRepo struct {
+	coll *mongo.Collection
+}
+
+func NewPaymentRepo(db *mongo.Database) *PaymentRepo {
+	return &PaymentRepo{coll: db.Collection("payments")}
+}
+
+func (r *PaymentRepo) Init(ctx context.Context) error {
+	_, err := r.coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "abacateCheckoutId", Value: 1}},
+			Options: options.Index().SetUnique(true).SetSparse(true),
+		},
+		{
+			Keys: bson.D{{Key: "buyerEmail", Value: 1}},
+		},
+	})
+	return err
+}
+
+func (r *PaymentRepo) Insert(ctx context.Context, payment *model.Payment) error {
+	payment.ID = primitive.NewObjectID()
+	payment.CreatedAt = time.Now()
+	_, err := r.coll.InsertOne(ctx, payment)
+	return err
+}
+
+func (r *PaymentRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*model.Payment, error) {
+	var payment model.Payment
+	err := r.coll.FindOne(ctx, bson.M{"_id": id}).Decode(&payment)
+	if err != nil {
+		return nil, err
+	}
+	return &payment, nil
+}
+
+func (r *PaymentRepo) FindByCheckoutID(ctx context.Context, checkoutID string) (*model.Payment, error) {
+	var payment model.Payment
+	err := r.coll.FindOne(ctx, bson.M{"abacateCheckoutId": checkoutID}).Decode(&payment)
+	if err != nil {
+		return nil, err
+	}
+	return &payment, nil
+}
+
+func (r *PaymentRepo) FindByEmail(ctx context.Context, email string) ([]model.Payment, error) {
+	cursor, err := r.coll.Find(ctx, bson.M{"buyerEmail": email})
+	if err != nil {
+		return nil, err
+	}
+	payments := make([]model.Payment, 0)
+	if err := cursor.All(ctx, &payments); err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
+func (r *PaymentRepo) FindByRaffle(ctx context.Context, raffleID primitive.ObjectID) ([]model.Payment, error) {
+	cursor, err := r.coll.Find(ctx, bson.M{"raffleId": raffleID})
+	if err != nil {
+		return nil, err
+	}
+	payments := make([]model.Payment, 0)
+	if err := cursor.All(ctx, &payments); err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
+func (r *PaymentRepo) UpdateStatus(ctx context.Context, id primitive.ObjectID, status model.PaymentStatus, paidAt *time.Time) error {
+	set := bson.M{
+		"status": status,
+	}
+	if paidAt != nil {
+		set["paidAt"] = paidAt
+	}
+	_, err := r.coll.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": set})
+	return err
+}
+
+func (r *PaymentRepo) Update(ctx context.Context, payment *model.Payment) error {
+	_, err := r.coll.UpdateOne(ctx, bson.M{"_id": payment.ID}, bson.M{"$set": payment})
+	return err
+}
+
+func (r *PaymentRepo) SumPaidByRaffle(ctx context.Context, raffleID primitive.ObjectID) (int64, error) {
+	match := bson.M{"$match": bson.M{"raffleId": raffleID, "status": model.PaymentStatusPaid}}
+	group := bson.M{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$amount"}}}
+	cursor, err := r.coll.Aggregate(ctx, []bson.M{match, group})
+	if err != nil {
+		return 0, err
+	}
+	var results []struct {
+		Total int64 `bson:"total"`
+	}
+	if err := cursor.All(ctx, &results); err != nil {
+		return 0, err
+	}
+	if len(results) == 0 {
+		return 0, nil
+	}
+	return results[0].Total, nil
+}

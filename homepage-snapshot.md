@@ -1,0 +1,15 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - link "Rifa Online" [ref=e7] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e8]:
+        - link "Rifas" [ref=e9] [cursor=pointer]:
+          - /url: /
+        - link "Entrar" [ref=e10] [cursor=pointer]:
+          - /url: /login
+        - link "Cadastrar" [ref=e11] [cursor=pointer]:
+          - /url: /register
+  - main [ref=e12]
+  - contentinfo [ref=e13]:
+    - generic [ref=e14]: © 2026 Rifa Online. Todos os direitos reservados.

@@ -1,0 +1,51 @@
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: rifaonline
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      MONGODB_URI: mongodb://mongodb:27017/rifaonline
+      MONGODB_DB_NAME: rifaonline
+      REDIS_URI: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      ABACATEPAY_API_KEY: ${ABACATEPAY_API_KEY}
+      ABACATEPAY_WEBHOOK_SECRET: ${ABACATEPAY_WEBHOOK_SECRET}
+      FRONTEND_URL: http://localhost:5173
+      LOG_LEVEL: debug
+      LOG_FORMAT: json
+    depends_on:
+      - mongodb
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:

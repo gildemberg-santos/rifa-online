@@ -1,0 +1,247 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"math"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/user/rifa-online/internal/model"
+	"github.com/user/rifa-online/internal/repository"
+	"github.com/user/rifa-online/pkg/abacatepay"
+)
+
+var (
+	ErrRaffleNotFound     = errors.New("raffle not found")
+	ErrNotRaffleOwner     = errors.New("not the raffle owner")
+	ErrRaffleAlreadyDrawn = errors.New("raffle already drawn")
+	ErrRaffleCancelled    = errors.New("raffle is cancelled")
+)
+
+type RaffleService struct {
+	raffleRepo    *repository.RaffleRepo
+	ticketRepo    *repository.TicketRepo
+	paymentRepo   *repository.PaymentRepo
+	abacateClient *abacatepay.Client
+}
+
+func NewRaffleService(raffleRepo *repository.RaffleRepo, ticketRepo *repository.TicketRepo, paymentRepo *repository.PaymentRepo, abacateClient *abacatepay.Client) *RaffleService {
+	return &RaffleService{
+		raffleRepo:    raffleRepo,
+		ticketRepo:    ticketRepo,
+		paymentRepo:   paymentRepo,
+		abacateClient: abacateClient,
+	}
+}
+
+type CreateRaffleInput struct {
+	OrganizerID string
+	Title       string
+	Description string
+	TicketPrice int
+	MaxNumbers  int
+	DrawDate    time.Time
+	ImageURL    string
+}
+
+func (s *RaffleService) Create(ctx context.Context, input CreateRaffleInput) (*model.Raffle, error) {
+	oid, err := primitive.ObjectIDFromHex(input.OrganizerID)
+	if err != nil {
+		return nil, errors.New("invalid organizer id")
+	}
+
+	raffle := &model.Raffle{
+		OrganizerID: oid,
+		Title:       input.Title,
+		Description: input.Description,
+		TicketPrice: input.TicketPrice,
+		MaxNumbers:  input.MaxNumbers,
+		DrawDate:    input.DrawDate,
+		ImageURL:    input.ImageURL,
+		Status:      model.RaffleStatusActive,
+	}
+
+	if err := s.raffleRepo.Insert(ctx, raffle); err != nil {
+		return nil, err
+	}
+
+	product, err := s.abacateClient.CreateProduct(abacatepay.CreateProductRequest{
+		ExternalID:  raffle.ID.Hex(),
+		Name:        input.Title,
+		Description: input.Description,
+		Price:       input.TicketPrice,
+		Currency:    "BRL",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	raffle.ExternalID = product.ID
+	if err := s.raffleRepo.Update(ctx, raffle); err != nil {
+		return nil, err
+	}
+
+	tickets := make([]model.Ticket, input.MaxNumbers)
+	for i := 0; i < input.MaxNumbers; i++ {
+		tickets[i] = model.Ticket{
+			RaffleID: raffle.ID,
+			Number:   i + 1,
+			Status:   model.TicketStatusAvailable,
+		}
+	}
+
+	if err := s.ticketRepo.InsertMany(ctx, tickets); err != nil {
+		return nil, err
+	}
+
+	return raffle, nil
+}
+
+func (s *RaffleService) ListActive(ctx context.Context) ([]model.Raffle, error) {
+	return s.raffleRepo.FindActive(ctx)
+}
+
+type RaffleDetail struct {
+	Raffle  *model.Raffle  `json:"raffle"`
+	Tickets []model.Ticket `json:"tickets"`
+}
+
+func (s *RaffleService) GetDetail(ctx context.Context, raffleID primitive.ObjectID) (*RaffleDetail, error) {
+	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
+	if err != nil {
+		return nil, ErrRaffleNotFound
+	}
+
+	tickets, err := s.ticketRepo.FindByRaffle(ctx, raffleID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RaffleDetail{Raffle: raffle, Tickets: tickets}, nil
+}
+
+func (s *RaffleService) GetMyRaffles(ctx context.Context, organizerID primitive.ObjectID) ([]model.Raffle, error) {
+	return s.raffleRepo.FindByOrganizer(ctx, organizerID)
+}
+
+func (s *RaffleService) Update(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID, input CreateRaffleInput) (*model.Raffle, error) {
+	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
+	if err != nil {
+		return nil, ErrRaffleNotFound
+	}
+	if raffle.OrganizerID != organizerID {
+		return nil, ErrNotRaffleOwner
+	}
+	if raffle.Status != model.RaffleStatusActive {
+		return nil, errors.New("can only edit active raffles")
+	}
+
+	raffle.Title = input.Title
+	raffle.Description = input.Description
+	raffle.TicketPrice = input.TicketPrice
+	raffle.DrawDate = input.DrawDate
+	raffle.ImageURL = input.ImageURL
+
+	if err := s.raffleRepo.Update(ctx, raffle); err != nil {
+		return nil, err
+	}
+	return raffle, nil
+}
+
+func (s *RaffleService) Cancel(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID) error {
+	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
+	if err != nil {
+		return ErrRaffleNotFound
+	}
+	if raffle.OrganizerID != organizerID {
+		return ErrNotRaffleOwner
+	}
+	if raffle.Status == model.RaffleStatusDrawn {
+		return ErrRaffleAlreadyDrawn
+	}
+
+	return s.raffleRepo.UpdateStatus(ctx, raffleID, model.RaffleStatusCancelled)
+}
+
+type RaffleStats struct {
+	TotalSold       int     `json:"totalSold"`
+	TotalRevenue    int64   `json:"totalRevenue"`
+	PercentageSold  float64 `json:"percentageSold"`
+	TicketPrice     int     `json:"ticketPrice"`
+	MaxNumbers      int     `json:"maxNumbers"`
+}
+
+func (s *RaffleService) GetStats(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID) (*RaffleStats, error) {
+	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
+	if err != nil {
+		return nil, ErrRaffleNotFound
+	}
+	if raffle.OrganizerID != organizerID {
+		return nil, ErrNotRaffleOwner
+	}
+
+	soldCount, err := s.ticketRepo.CountByRaffleAndStatus(ctx, raffleID, model.TicketStatusPaid)
+	if err != nil {
+		return nil, err
+	}
+
+	totalRevenue, err := s.paymentRepo.SumPaidByRaffle(ctx, raffleID)
+	if err != nil {
+		return nil, err
+	}
+
+	percentage := 0.0
+	if raffle.MaxNumbers > 0 {
+		percentage = math.Round(float64(soldCount)/float64(raffle.MaxNumbers)*10000) / 100
+	}
+
+	return &RaffleStats{
+		TotalSold:      int(soldCount),
+		TotalRevenue:   totalRevenue,
+		PercentageSold: percentage,
+		TicketPrice:    raffle.TicketPrice,
+		MaxNumbers:     raffle.MaxNumbers,
+	}, nil
+}
+
+type DrawResult struct {
+	WinnerNumber int            `json:"winnerNumber"`
+	Raffle       *model.Raffle `json:"raffle"`
+}
+
+func (s *RaffleService) Draw(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID) (*DrawResult, error) {
+	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
+	if err != nil {
+		return nil, ErrRaffleNotFound
+	}
+	if raffle.OrganizerID != organizerID {
+		return nil, ErrNotRaffleOwner
+	}
+	if raffle.Status != model.RaffleStatusActive {
+		return nil, errors.New("raffle is not active")
+	}
+
+	paidTickets, err := s.ticketRepo.FindPaidByRaffle(ctx, raffleID)
+	if err != nil {
+		return nil, err
+	}
+	if len(paidTickets) == 0 {
+		return nil, errors.New("no paid tickets to draw from")
+	}
+
+	winner := paidTickets[time.Now().UnixNano()%int64(len(paidTickets))]
+
+	if err := s.raffleRepo.UpdateWinner(ctx, raffleID, winner.Number); err != nil {
+		return nil, err
+	}
+
+	raffle.Status = model.RaffleStatusDrawn
+	raffle.WinnerNumber = &winner.Number
+
+	return &DrawResult{
+		WinnerNumber: winner.Number,
+		Raffle:       raffle,
+	}, nil
+}
