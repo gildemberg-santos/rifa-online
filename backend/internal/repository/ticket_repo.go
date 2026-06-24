@@ -153,6 +153,29 @@ func (r *TicketRepo) CountByRaffleAndStatus(ctx context.Context, raffleID primit
 	return r.coll.CountDocuments(ctx, bson.M{"raffleId": raffleID, "status": status})
 }
 
+func (r *TicketRepo) FindReservedOlderThan(ctx context.Context, cutoff time.Time) ([]model.Ticket, error) {
+	cursor, err := r.coll.Find(ctx, bson.M{
+		"status":     model.TicketStatusReserved,
+		"reservedAt": bson.M{"$lt": cutoff},
+	})
+	if err != nil {
+		return nil, err
+	}
+	tickets := make([]model.Ticket, 0)
+	if err := cursor.All(ctx, &tickets); err != nil {
+		return nil, err
+	}
+	return tickets, nil
+}
+
+func (r *TicketRepo) ReleaseReservations(ctx context.Context, ids []primitive.ObjectID) error {
+	_, err := r.coll.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": ids}}, bson.M{
+		"$set":   bson.M{"status": model.TicketStatusAvailable},
+		"$unset": bson.M{"reservedAt": "", "buyerName": "", "buyerEmail": "", "paymentId": ""},
+	})
+	return err
+}
+
 func (r *TicketRepo) UpdateManyStatus(ctx context.Context, ids []primitive.ObjectID, status model.TicketStatus) error {
 	_, err := r.coll.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": ids}}, bson.M{
 		"$set": bson.M{"status": status},

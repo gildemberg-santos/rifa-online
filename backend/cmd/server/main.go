@@ -24,6 +24,7 @@ import (
 	"github.com/user/rifa-online/internal/repository"
 	"github.com/user/rifa-online/internal/service"
 	"github.com/user/rifa-online/pkg/infinitepay"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func main() {
@@ -87,6 +88,10 @@ func main() {
 		logger.Error("failed to init webhook repo", "error", err)
 		os.Exit(1)
 	}
+
+	reservationTTL := 30 * time.Minute
+	cleanupInterval := 5 * time.Minute
+	go cleanupExpiredReservations(logger, ticketRepo, paymentRepo, reservationTTL, cleanupInterval)
 
 	authService := service.NewAuthService(userRepo, cfg)
 	authHandler := handler.NewAuthHandler(authService)
@@ -222,4 +227,45 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("server stopped")
+}
+
+func cleanupExpiredReservations(logger *slog.Logger, ticketRepo *repository.TicketRepo, paymentRepo *repository.PaymentRepo, ttl, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		cutoff := time.Now().Add(-ttl)
+
+		releasedCount := 0
+		tickets, err := ticketRepo.FindReservedOlderThan(ctx, cutoff)
+		if err != nil {
+			logger.Error("failed to find expired reservations", "error", err)
+			cancel()
+			continue
+		}
+
+		if len(tickets) > 0 {
+			ids := make([]primitive.ObjectID, len(tickets))
+			for i, t := range tickets {
+				ids[i] = t.ID
+			}
+			if err := ticketRepo.ReleaseReservations(ctx, ids); err != nil {
+				logger.Error("failed to release expired reservations", "error", err)
+			} else {
+				releasedCount = len(ids)
+			}
+		}
+
+		expiredCount, err := paymentRepo.ExpirePendingOlderThan(ctx, cutoff)
+		if err != nil {
+			logger.Error("failed to expire old pending payments", "error", err)
+		}
+
+		if releasedCount > 0 || expiredCount > 0 {
+			logger.Info("reservation cleanup complete", "released", releasedCount, "expired_payments", expiredCount)
+		}
+
+		cancel()
+	}
 }

@@ -12,6 +12,7 @@ const (
 	PaymentStatusPending   PaymentStatus = "PENDING"
 	PaymentStatusPaid      PaymentStatus = "PAID"
 	PaymentStatusRefunded  PaymentStatus = "REFUNDED"
+	PaymentStatusExpired   PaymentStatus = "EXPIRED"
 )
 
 type PaymentMethod string

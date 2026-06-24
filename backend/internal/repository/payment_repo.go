@@ -95,6 +95,17 @@ func (r *PaymentRepo) UpdateFields(ctx context.Context, id primitive.ObjectID, f
 	return err
 }
 
+func (r *PaymentRepo) ExpirePendingOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	result, err := r.coll.UpdateMany(ctx, bson.M{
+		"status":    model.PaymentStatusPending,
+		"createdAt": bson.M{"$lt": cutoff},
+	}, bson.M{"$set": bson.M{"status": model.PaymentStatusExpired}})
+	if err != nil {
+		return 0, err
+	}
+	return result.ModifiedCount, nil
+}
+
 func (r *PaymentRepo) UpdateStatus(ctx context.Context, id primitive.ObjectID, status model.PaymentStatus, paidAt *time.Time) error {
 	set := bson.M{
 		"status": status,
