@@ -27,7 +27,6 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   })
 
   if (!res.ok) {
-    const text = await res.text()
     throw new ApiError(res.status, `Request failed (${res.status})`)
   }
 
