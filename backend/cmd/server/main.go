@@ -15,12 +15,14 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/user/rifa-online/internal/config"
 	"github.com/user/rifa-online/internal/handler"
 	"github.com/user/rifa-online/internal/middleware"
+	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/repository"
 	"github.com/user/rifa-online/internal/service"
 	"github.com/user/rifa-online/pkg/infinitepay"
@@ -93,6 +95,8 @@ func main() {
 	cleanupInterval := 5 * time.Minute
 	go cleanupExpiredReservations(logger, ticketRepo, paymentRepo, reservationTTL, cleanupInterval)
 
+	seedDefaultUser(userRepo)
+
 	authService := service.NewAuthService(userRepo, cfg)
 	authHandler := handler.NewAuthHandler(authService)
 
@@ -162,6 +166,12 @@ func main() {
 		})
 
 		r.Post("/webhooks/infinitepay", webhookHandler.HandleInfinitePay)
+
+		r.Route("/me", func(r chi.Router) {
+			r.Use(authMw)
+			r.Get("/", authHandler.GetProfile)
+			r.Put("/", authHandler.UpdateProfile)
+		})
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -227,6 +237,35 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("server stopped")
+}
+
+func seedDefaultUser(userRepo *repository.UserRepo) {
+	ctx := context.Background()
+	email := "admin@email.com"
+
+	_, err := userRepo.FindByEmail(ctx, email)
+	if err == nil {
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte("123456"), 12)
+	if err != nil {
+		slog.Warn("failed to hash default user password", "error", err)
+		return
+	}
+
+	user := &model.User{
+		Name:         "Administrador",
+		Email:        email,
+		PasswordHash: string(hash),
+	}
+
+	if err := userRepo.Insert(ctx, user); err != nil {
+		slog.Warn("failed to seed default user", "error", err)
+		return
+	}
+
+	slog.Info("default admin user created", "email", email)
 }
 
 func cleanupExpiredReservations(logger *slog.Logger, ticketRepo *repository.TicketRepo, paymentRepo *repository.PaymentRepo, ttl, interval time.Duration) {

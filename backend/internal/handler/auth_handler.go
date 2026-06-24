@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/user/rifa-online/internal/middleware"
+	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/service"
 )
 
@@ -88,6 +90,45 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, toAuthResponse(result))
+}
+
+func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	user, err := h.authService.GetProfile(r.Context(), userID)
+	if err != nil {
+		writeError(w, "user not found", http.StatusNotFound)
+		return
+	}
+	writeJSON(w, http.StatusOK, toUserResponse(user))
+}
+
+func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	var req service.UpdateProfileInput
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userID := middleware.UserIDFromContext(r.Context())
+	user, err := h.authService.UpdateProfile(r.Context(), userID, req)
+	if err != nil {
+		if errors.Is(err, service.ErrEmailAlreadyRegistered) {
+			writeError(w, "email already in use", http.StatusConflict)
+			return
+		}
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, toUserResponse(user))
+}
+
+func toUserResponse(user *model.User) *userResponse {
+	return &userResponse{
+		ID:    user.ID.Hex(),
+		Name:  user.Name,
+		Email: user.Email,
+	}
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
@@ -120,6 +121,61 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*AuthResult,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
+}
+
+func (s *AuthService) GetProfile(ctx context.Context, userID string) (*model.User, error) {
+	oid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+	return s.userRepo.FindByID(ctx, oid)
+}
+
+type UpdateProfileInput struct {
+	Name     string `json:"name,omitempty"`
+	Email    string `json:"email,omitempty"`
+	Password string `json:"password,omitempty"`
+}
+
+func (s *AuthService) UpdateProfile(ctx context.Context, userID string, input UpdateProfileInput) (*model.User, error) {
+	oid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+
+	updates := bson.M{}
+
+	if input.Name != "" {
+		updates["name"] = strings.TrimSpace(input.Name)
+	}
+	if input.Email != "" {
+		email := strings.TrimSpace(strings.ToLower(input.Email))
+		existing, err := s.userRepo.FindByEmail(ctx, email)
+		if err == nil && existing.ID != oid {
+			return nil, ErrEmailAlreadyRegistered
+		}
+		updates["email"] = email
+	}
+	if input.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), 12)
+		if err != nil {
+			return nil, err
+		}
+		updates["passwordHash"] = string(hash)
+	}
+
+	if len(updates) == 0 {
+		return s.GetProfile(ctx, userID)
+	}
+
+	if err := s.userRepo.UpdateFields(ctx, oid, updates); err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, ErrEmailAlreadyRegistered
+		}
+		return nil, err
+	}
+
+	return s.userRepo.FindByID(ctx, oid)
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, tokenStr string) (*AuthResult, error) {

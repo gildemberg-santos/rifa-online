@@ -60,6 +60,12 @@ func (r *UserRepo) Update(ctx context.Context, user *model.User) error {
 	return err
 }
 
+func (r *UserRepo) UpdateFields(ctx context.Context, id primitive.ObjectID, updates bson.M) error {
+	updates["updatedAt"] = time.Now()
+	_, err := r.coll.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": updates})
+	return err
+}
+
 func (r *UserRepo) Delete(ctx context.Context, id primitive.ObjectID) error {
 	_, err := r.coll.DeleteOne(ctx, bson.M{"_id": id})
 	return err

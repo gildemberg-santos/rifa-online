@@ -18,8 +18,14 @@ const auth = useAuthStore()
           </router-link>
 
           <template v-if="auth.isAuthenticated">
+            <router-link to="/" class="text-sm text-gray-600 hover:text-gray-900">
+              Rifas
+            </router-link>
             <router-link to="/dashboard" class="text-sm text-gray-600 hover:text-gray-900">
               Dashboard
+            </router-link>
+            <router-link to="/profile" class="text-sm text-gray-600 hover:text-gray-900">
+              Perfil
             </router-link>
             <button
               @click="auth.logout"

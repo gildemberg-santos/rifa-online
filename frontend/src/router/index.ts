@@ -60,6 +60,12 @@ const router = createRouter({
       component: () => import("../pages/EditRaffle.vue"),
       meta: { requiresAuth: true },
     },
+    {
+      path: "/profile",
+      name: "profile",
+      component: () => import("../pages/Profile.vue"),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
