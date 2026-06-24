@@ -112,11 +112,16 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 
 	totalAmount := raffle.TicketPrice * len(input.Numbers)
 
+	buyerEmail := input.BuyerEmail
+	if buyerEmail == "" {
+		buyerEmail = input.BuyerPhone + "@c.rifa"
+	}
+
 	payment := &model.Payment{
 		RaffleID:   raffleID,
 		TicketIDs:  ticketIDs,
 		BuyerName:  input.BuyerName,
-		BuyerEmail: input.BuyerEmail,
+		BuyerEmail: buyerEmail,
 		BuyerPhone: input.BuyerPhone,
 		Amount:     totalAmount,
 		Status:     model.PaymentStatusPending,
@@ -137,7 +142,7 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		OrderNSU:   payment.ID.Hex(),
 		Customer: &infinitepay.Customer{
 			Name:        input.BuyerName,
-			Email:       input.BuyerEmail,
+			Email:       buyerEmail,
 			PhoneNumber: input.BuyerPhone,
 		},
 	})
