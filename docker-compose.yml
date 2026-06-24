@@ -28,8 +28,7 @@ services:
       MONGODB_DB_NAME: rifaonline
       REDIS_URI: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
-      ABACATEPAY_API_KEY: ${ABACATEPAY_API_KEY}
-      ABACATEPAY_WEBHOOK_SECRET: ${ABACATEPAY_WEBHOOK_SECRET}
+      INFINITEPAY_HANDLE: ${INFINITEPAY_HANDLE}
       FRONTEND_URL: http://localhost:5173
       LOG_LEVEL: debug
       LOG_FORMAT: json

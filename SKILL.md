@@ -3,7 +3,7 @@
 ## Stack
 - **Backend:** Go 1.23+ / Chi Router v5 / MongoDB 7+ / Redis 7+
 - **Frontend:** Vue 3 + TypeScript / Vite 6 / Tailwind CSS 4 / Pinia / Vue Router
-- **Payments:** AbacatePay API v2 (checkout hospedado, webhooks HMAC)
+- **Payments:** InfinitePay Checkout API (checkout hospedado, webhooks)
 
 ## Structure
 ```
@@ -17,8 +17,8 @@ backend/
 │   ├── model/                  # MongoDB structs (user, raffle, ticket, payment, webhook_event)
 │   ├── repository/             # MongoDB CRUD + indexes + transactions
 │   ├── service/                # Business logic layer
-│   └── webhook/abacatepay.go   # HMAC verification, event processing
-└── pkg/abacatepay/             # AbacatePay HTTP client (products, checkout, types)
+│   └── webhook/infinitepay.go  # Webhook payload parsing
+└── pkg/infinitepay/             # InfinitePay HTTP client (checkout, types)
 frontend/
 └── src/
     ├── assets/                 # Images, CSS
@@ -47,7 +47,7 @@ frontend/
 - JWT: access token 1h, refresh token 7d, bcrypt cost 12
 - Errors: JSON `{ "error": "message" }`, appropriate HTTP status codes
 - Redis: locks with 15min TTL for number reservation during checkout
-- Concurrency: Redis lock -> create payment -> create AbacatePay checkout -> return URL
+- Concurrency: Redis lock -> create payment -> create InfinitePay checkout -> return URL
 
 ## Tasks (from docs/TASKS.md)
 17 tasks in 5 phases. Each task has defined files, description, and acceptance criteria.

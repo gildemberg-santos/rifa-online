@@ -26,11 +26,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     body: body ? JSON.stringify(body) : undefined,
   })
 
-  const data = await res.json()
-
   if (!res.ok) {
-    throw new ApiError(res.status, data.error || "Request failed")
+    const text = await res.text()
+    throw new ApiError(res.status, `Request failed (${res.status})`)
   }
+
+  const data = await res.json()
 
   return data as T
 }

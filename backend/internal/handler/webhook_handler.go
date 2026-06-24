@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
 	"github.com/user/rifa-online/internal/config"
 	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/repository"
@@ -35,108 +37,67 @@ func NewWebhookHandler(
 	}
 }
 
-func (h *WebhookHandler) HandleAbacatePay(w http.ResponseWriter, r *http.Request) {
-	payload, err := webhook.ParseAndValidateWebhook(r, h.cfg.AbacatepayWebhookSecret)
+func (h *WebhookHandler) HandleInfinitePay(w http.ResponseWriter, r *http.Request) {
+	payload, err := webhook.ParseInfinitePayWebhook(r)
 	if err != nil {
-		h.logger.Warn("webhook validation failed", "error", err)
-		http.Error(w, `{"error":"invalid webhook"}`, http.StatusUnauthorized)
+		h.logger.Warn("webhook parse failed", "error", err)
+		http.Error(w, `{"error":"invalid webhook"}`, http.StatusBadRequest)
 		return
 	}
 
-	exists, err := h.webhookRepo.ExistsByEventID(r.Context(), payload.ID)
+	payment, err := h.paymentRepo.FindByOrderNSU(r.Context(), payload.OrderNSU)
 	if err != nil {
-		h.logger.Error("webhook idempotency check failed", "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if exists {
+		h.logger.Error("payment not found for order_nsu", "order_nsu", payload.OrderNSU, "error", err)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	event := &model.WebhookEvent{
-		EventID:   payload.ID,
-		Event:     payload.Event,
-		RawBody:   string(payload.Data),
-		Processed: false,
+	if payment.Status == model.PaymentStatusPaid {
+		w.WriteHeader(http.StatusOK)
+		return
 	}
-	if err := h.webhookRepo.Insert(r.Context(), event); err != nil {
-		h.logger.Error("webhook event insert failed", "error", err)
+
+	paymentMethod := model.PaymentMethodPIX
+	if payload.CaptureMethod == "credit_card" {
+		paymentMethod = model.PaymentMethodCard
+	}
+
+	payment.InvoiceSlug = payload.InvoiceSlug
+	payment.TransactionNSU = payload.TransactionNSU
+	payment.PaymentMethod = paymentMethod
+
+	now := time.Now()
+	if err := h.paymentRepo.UpdateStatus(r.Context(), payment.ID, model.PaymentStatusPaid, &now); err != nil {
+		h.logger.Error("failed to update payment status", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	switch payload.Event {
-	case "checkout.completed":
-		if err := h.handleCheckoutCompleted(r, payload); err != nil {
-			h.logger.Error("checkout.completed processing failed", "error", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		h.logger.Info("checkout.completed processed", "event_id", payload.ID)
-	case "checkout.refunded":
-		if err := h.handleCheckoutRefunded(r, payload); err != nil {
-			h.logger.Error("checkout.refunded processing failed", "error", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		h.logger.Info("checkout.refunded processed", "event_id", payload.ID)
-	default:
-		h.logger.Warn("unknown webhook event", "event", payload.Event)
+	if err := h.paymentRepo.UpdateFields(r.Context(), payment.ID, bsonUpdateFields(payment)); err != nil {
+		h.logger.Error("failed to update payment fields", "error", err)
 	}
 
-	if err := h.webhookRepo.MarkAsProcessed(r.Context(), event.ID); err != nil {
-		h.logger.Error("failed to mark webhook as processed", "error", err)
+	if err := h.ticketRepo.MarkAsPaid(r.Context(), payment.TicketIDs, payment.BuyerName, payment.BuyerEmail, payment.ID.Hex()); err != nil {
+		h.logger.Error("failed to mark tickets as paid", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+
+	h.logger.Info("payment completed via webhook",
+		"order_nsu", payload.OrderNSU,
+		"invoice_slug", payload.InvoiceSlug,
+		"amount", payload.PaidAmount,
+		"method", payload.CaptureMethod,
+	)
 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *WebhookHandler) handleCheckoutCompleted(r *http.Request, payload *webhook.AbacatePayWebhookPayload) error {
-	data, err := webhook.ParseCheckoutCompleted(payload.Data)
-	if err != nil {
-		return err
+func bsonUpdateFields(payment *model.Payment) primitive.M {
+	m := primitive.M{
+		"invoiceSlug":    payment.InvoiceSlug,
+		"transactionNsu": payment.TransactionNSU,
+		"paymentMethod":  payment.PaymentMethod,
 	}
-
-	payment, err := h.paymentRepo.FindByCheckoutID(r.Context(), data.ID)
-	if err != nil {
-		return err
-	}
-
-	if payment.Status == model.PaymentStatusPaid {
-		return nil
-	}
-
-	now := time.Now()
-	if err := h.paymentRepo.UpdateStatus(r.Context(), payment.ID, model.PaymentStatusPaid, &now); err != nil {
-		return err
-	}
-
-	if err := h.ticketRepo.MarkAsPaid(r.Context(), payment.TicketIDs, payment.BuyerName, payment.BuyerEmail, payment.ID.Hex()); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *WebhookHandler) handleCheckoutRefunded(r *http.Request, payload *webhook.AbacatePayWebhookPayload) error {
-	data, err := webhook.ParseCheckoutCompleted(payload.Data)
-	if err != nil {
-		return err
-	}
-
-	payment, err := h.paymentRepo.FindByCheckoutID(r.Context(), data.ID)
-	if err != nil {
-		return err
-	}
-
-	if err := h.paymentRepo.UpdateStatus(r.Context(), payment.ID, model.PaymentStatusRefunded, nil); err != nil {
-		return err
-	}
-
-	if err := h.ticketRepo.UpdateManyStatus(r.Context(), payment.TicketIDs, model.TicketStatusAvailable); err != nil {
-		return err
-	}
-
-	return nil
+	return m
 }

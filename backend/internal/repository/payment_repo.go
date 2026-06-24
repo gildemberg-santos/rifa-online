@@ -23,7 +23,7 @@ func NewPaymentRepo(db *mongo.Database) *PaymentRepo {
 func (r *PaymentRepo) Init(ctx context.Context) error {
 	_, err := r.coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
-			Keys:    bson.D{{Key: "abacateCheckoutId", Value: 1}},
+			Keys:    bson.D{{Key: "invoiceSlug", Value: 1}},
 			Options: options.Index().SetUnique(true).SetSparse(true),
 		},
 		{
@@ -49,13 +49,21 @@ func (r *PaymentRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*mod
 	return &payment, nil
 }
 
-func (r *PaymentRepo) FindByCheckoutID(ctx context.Context, checkoutID string) (*model.Payment, error) {
+func (r *PaymentRepo) FindByInvoiceSlug(ctx context.Context, slug string) (*model.Payment, error) {
 	var payment model.Payment
-	err := r.coll.FindOne(ctx, bson.M{"abacateCheckoutId": checkoutID}).Decode(&payment)
+	err := r.coll.FindOne(ctx, bson.M{"invoiceSlug": slug}).Decode(&payment)
 	if err != nil {
 		return nil, err
 	}
 	return &payment, nil
+}
+
+func (r *PaymentRepo) FindByOrderNSU(ctx context.Context, orderNSU string) (*model.Payment, error) {
+	oid, err := primitive.ObjectIDFromHex(orderNSU)
+	if err != nil {
+		return nil, err
+	}
+	return r.FindByID(ctx, oid)
 }
 
 func (r *PaymentRepo) FindByEmail(ctx context.Context, email string) ([]model.Payment, error) {
@@ -80,6 +88,11 @@ func (r *PaymentRepo) FindByRaffle(ctx context.Context, raffleID primitive.Objec
 		return nil, err
 	}
 	return payments, nil
+}
+
+func (r *PaymentRepo) UpdateFields(ctx context.Context, id primitive.ObjectID, fields primitive.M) error {
+	_, err := r.coll.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": fields})
+	return err
 }
 
 func (r *PaymentRepo) UpdateStatus(ctx context.Context, id primitive.ObjectID, status model.PaymentStatus, paidAt *time.Time) error {

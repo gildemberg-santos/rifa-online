@@ -19,16 +19,15 @@ func TestPaymentRepo(t *testing.T) {
 
 	raffleID := primitive.NewObjectID()
 
-	makePayment := func(email, checkoutID string) *model.Payment {
+	makePayment := func(email, slug string) *model.Payment {
 		return &model.Payment{
-			RaffleID:          raffleID,
-			TicketIDs:         []primitive.ObjectID{primitive.NewObjectID()},
-			BuyerName:         "Test Buyer",
-			BuyerEmail:        email,
-			AbacateCheckoutID: checkoutID,
-			AbacateCheckoutURL: "https://abacatepay.com/checkout/" + checkoutID,
-			Amount:            5000,
-			Status:            model.PaymentStatusPending,
+			RaffleID:    raffleID,
+			TicketIDs:   []primitive.ObjectID{primitive.NewObjectID()},
+			BuyerName:   "Test Buyer",
+			BuyerEmail:  email,
+			InvoiceSlug: slug,
+			Amount:      5000,
+			Status:      model.PaymentStatusPending,
 		}
 	}
 
@@ -50,15 +49,15 @@ func TestPaymentRepo(t *testing.T) {
 		}
 	})
 
-	t.Run("FindByCheckoutID", func(t *testing.T) {
-		repo.Insert(ctx, makePayment("buyer2@example.com", "bill_002"))
+	t.Run("FindByInvoiceSlug", func(t *testing.T) {
+		repo.Insert(ctx, makePayment("buyer2@example.com", "slug_002"))
 
-		found, err := repo.FindByCheckoutID(ctx, "bill_002")
+		found, err := repo.FindByInvoiceSlug(ctx, "slug_002")
 		if err != nil {
-			t.Fatalf("FindByCheckoutID: %v", err)
+			t.Fatalf("FindByInvoiceSlug: %v", err)
 		}
-		if found.AbacateCheckoutID != "bill_002" {
-			t.Fatalf("expected bill_002, got %s", found.AbacateCheckoutID)
+		if found.InvoiceSlug != "slug_002" {
+			t.Fatalf("expected slug_002, got %s", found.InvoiceSlug)
 		}
 	})
 

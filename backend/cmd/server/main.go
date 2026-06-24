@@ -23,7 +23,7 @@ import (
 	"github.com/user/rifa-online/internal/middleware"
 	"github.com/user/rifa-online/internal/repository"
 	"github.com/user/rifa-online/internal/service"
-	"github.com/user/rifa-online/pkg/abacatepay"
+	"github.com/user/rifa-online/pkg/infinitepay"
 )
 
 func main() {
@@ -91,10 +91,11 @@ func main() {
 	authService := service.NewAuthService(userRepo, cfg)
 	authHandler := handler.NewAuthHandler(authService)
 
-	abacateClient := abacatepay.NewClient(cfg.AbacatepayAPIKey)
+	webhookURL := cfg.FrontendURL + "/api/v1/webhooks/infinitepay"
+	infiniteClient := infinitepay.NewClient(cfg.InfinitePayHandle, webhookURL, cfg.FrontendURL)
 
-	raffleService := service.NewRaffleService(raffleRepo, ticketRepo, paymentRepo, abacateClient)
-	paymentService := service.NewPaymentService(raffleRepo, ticketRepo, paymentRepo, abacateClient, redisClient, cfg)
+	raffleService := service.NewRaffleService(raffleRepo, ticketRepo, paymentRepo)
+	paymentService := service.NewPaymentService(raffleRepo, ticketRepo, paymentRepo, infiniteClient, redisClient, cfg)
 
 	raffleHandler := handler.NewRaffleHandler(raffleService)
 	paymentHandler := handler.NewPaymentHandler(paymentService, paymentRepo, ticketRepo)
@@ -155,7 +156,7 @@ func main() {
 			})
 		})
 
-		r.Post("/webhooks/abacatepay", webhookHandler.HandleAbacatePay)
+		r.Post("/webhooks/infinitepay", webhookHandler.HandleInfinitePay)
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

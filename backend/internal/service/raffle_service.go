@@ -10,7 +10,6 @@ import (
 
 	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/repository"
-	"github.com/user/rifa-online/pkg/abacatepay"
 )
 
 var (
@@ -21,18 +20,16 @@ var (
 )
 
 type RaffleService struct {
-	raffleRepo    *repository.RaffleRepo
-	ticketRepo    *repository.TicketRepo
-	paymentRepo   *repository.PaymentRepo
-	abacateClient *abacatepay.Client
+	raffleRepo  *repository.RaffleRepo
+	ticketRepo  *repository.TicketRepo
+	paymentRepo *repository.PaymentRepo
 }
 
-func NewRaffleService(raffleRepo *repository.RaffleRepo, ticketRepo *repository.TicketRepo, paymentRepo *repository.PaymentRepo, abacateClient *abacatepay.Client) *RaffleService {
+func NewRaffleService(raffleRepo *repository.RaffleRepo, ticketRepo *repository.TicketRepo, paymentRepo *repository.PaymentRepo) *RaffleService {
 	return &RaffleService{
-		raffleRepo:    raffleRepo,
-		ticketRepo:    ticketRepo,
-		paymentRepo:   paymentRepo,
-		abacateClient: abacateClient,
+		raffleRepo:  raffleRepo,
+		ticketRepo:  ticketRepo,
+		paymentRepo: paymentRepo,
 	}
 }
 
@@ -64,22 +61,6 @@ func (s *RaffleService) Create(ctx context.Context, input CreateRaffleInput) (*m
 	}
 
 	if err := s.raffleRepo.Insert(ctx, raffle); err != nil {
-		return nil, err
-	}
-
-	product, err := s.abacateClient.CreateProduct(abacatepay.CreateProductRequest{
-		ExternalID:  raffle.ID.Hex(),
-		Name:        input.Title,
-		Description: input.Description,
-		Price:       input.TicketPrice,
-		Currency:    "BRL",
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	raffle.ExternalID = product.ID
-	if err := s.raffleRepo.Update(ctx, raffle); err != nil {
 		return nil, err
 	}
 

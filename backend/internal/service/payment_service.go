@@ -12,7 +12,7 @@ import (
 	"github.com/user/rifa-online/internal/config"
 	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/repository"
-	"github.com/user/rifa-online/pkg/abacatepay"
+	"github.com/user/rifa-online/pkg/infinitepay"
 )
 
 var (
@@ -21,29 +21,29 @@ var (
 )
 
 type PaymentService struct {
-	raffleRepo    *repository.RaffleRepo
-	ticketRepo    *repository.TicketRepo
-	paymentRepo   *repository.PaymentRepo
-	abacateClient *abacatepay.Client
-	redisClient   *redis.Client
-	cfg           *config.Config
+	raffleRepo      *repository.RaffleRepo
+	ticketRepo      *repository.TicketRepo
+	paymentRepo     *repository.PaymentRepo
+	infiniteClient  *infinitepay.Client
+	redisClient     *redis.Client
+	cfg             *config.Config
 }
 
 func NewPaymentService(
 	raffleRepo *repository.RaffleRepo,
 	ticketRepo *repository.TicketRepo,
 	paymentRepo *repository.PaymentRepo,
-	abacateClient *abacatepay.Client,
+	infiniteClient *infinitepay.Client,
 	redisClient *redis.Client,
 	cfg *config.Config,
 ) *PaymentService {
 	return &PaymentService{
-		raffleRepo:    raffleRepo,
-		ticketRepo:    ticketRepo,
-		paymentRepo:   paymentRepo,
-		abacateClient: abacateClient,
-		redisClient:   redisClient,
-		cfg:           cfg,
+		raffleRepo:      raffleRepo,
+		ticketRepo:      ticketRepo,
+		paymentRepo:     paymentRepo,
+		infiniteClient:  infiniteClient,
+		redisClient:     redisClient,
+		cfg:             cfg,
 	}
 }
 
@@ -124,21 +124,25 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		return nil, err
 	}
 
-	checkout, err := s.abacateClient.CreateCheckout(abacatepay.CreateCheckoutRequest{
-		Items: []abacatepay.CheckoutItem{
-			{ID: raffle.ExternalID, Quantity: len(input.Numbers)},
+	checkout, err := s.infiniteClient.CreateCheckout(infinitepay.CreateCheckoutRequest{
+		Items: []infinitepay.CheckoutItem{
+			{
+				Quantity:    len(input.Numbers),
+				Price:       totalAmount,
+				Description: fmt.Sprintf("%d números - %s", len(input.Numbers), raffle.Title),
+			},
 		},
-		ExternalID:    payment.ID.Hex(),
-		ReturnURL:     s.cfg.FrontendURL + "/raffles/" + input.RaffleID,
-		CompletionURL: s.cfg.FrontendURL + "/payment/success?paymentId=" + payment.ID.Hex(),
-		Methods:       []string{"PIX", "CARD"},
+		OrderNSU:   payment.ID.Hex(),
+		Customer: &infinitepay.Customer{
+			Name:  input.BuyerName,
+			Email: input.BuyerEmail,
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create checkout: %w", err)
 	}
 
-	payment.AbacateCheckoutID = checkout.ID
-	payment.AbacateCheckoutURL = checkout.URL
+	payment.CheckoutURL = checkout.URL
 	if err := s.paymentRepo.Update(ctx, payment); err != nil {
 		return nil, err
 	}
