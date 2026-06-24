@@ -89,6 +89,8 @@ type RaffleDetail struct {
 	Tickets []model.Ticket `json:"tickets"`
 }
 
+const reservationTTL = 30 * time.Minute
+
 func (s *RaffleService) GetDetail(ctx context.Context, raffleID primitive.ObjectID) (*RaffleDetail, error) {
 	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
 	if err != nil {
@@ -98,6 +100,21 @@ func (s *RaffleService) GetDetail(ctx context.Context, raffleID primitive.Object
 	tickets, err := s.ticketRepo.FindByRaffle(ctx, raffleID)
 	if err != nil {
 		return nil, err
+	}
+
+	now := time.Now()
+	for i := range tickets {
+		if tickets[i].Status == model.TicketStatusReserved && tickets[i].ReservedAt != nil {
+			elapsed := now.Sub(*tickets[i].ReservedAt)
+			remaining := reservationTTL - elapsed
+			if remaining > 0 {
+				secs := int(remaining.Seconds())
+				tickets[i].ReservationExpiresIn = &secs
+			} else {
+				zero := 0
+				tickets[i].ReservationExpiresIn = &zero
+			}
+		}
 	}
 
 	return &RaffleDetail{Raffle: raffle, Tickets: tickets}, nil
