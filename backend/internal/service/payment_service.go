@@ -48,10 +48,11 @@ func NewPaymentService(
 }
 
 type CheckoutInput struct {
-	RaffleID  string
-	Numbers   []int
-	BuyerName string
+	RaffleID   string
+	Numbers    []int
+	BuyerName  string
 	BuyerEmail string
+	BuyerPhone string
 }
 
 type CheckoutResult struct {
@@ -112,12 +113,13 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 	totalAmount := raffle.TicketPrice * len(input.Numbers)
 
 	payment := &model.Payment{
-		RaffleID:  raffleID,
-		TicketIDs: ticketIDs,
-		BuyerName: input.BuyerName,
+		RaffleID:   raffleID,
+		TicketIDs:  ticketIDs,
+		BuyerName:  input.BuyerName,
 		BuyerEmail: input.BuyerEmail,
-		Amount:    totalAmount,
-		Status:    model.PaymentStatusPending,
+		BuyerPhone: input.BuyerPhone,
+		Amount:     totalAmount,
+		Status:     model.PaymentStatusPending,
 	}
 
 	if err := s.paymentRepo.Insert(ctx, payment); err != nil {
@@ -134,8 +136,9 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		},
 		OrderNSU:   payment.ID.Hex(),
 		Customer: &infinitepay.Customer{
-			Name:  input.BuyerName,
-			Email: input.BuyerEmail,
+			Name:        input.BuyerName,
+			Email:       input.BuyerEmail,
+			PhoneNumber: input.BuyerPhone,
 		},
 	})
 	if err != nil {

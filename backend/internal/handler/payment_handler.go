@@ -32,6 +32,7 @@ type checkoutRequest struct {
 	Numbers    []int  `json:"numbers"`
 	BuyerName  string `json:"buyerName"`
 	BuyerEmail string `json:"buyerEmail"`
+	BuyerPhone string `json:"buyerPhone"`
 }
 
 func (h *PaymentHandler) Checkout(w http.ResponseWriter, r *http.Request) {
@@ -47,8 +48,8 @@ func (h *PaymentHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "at least one number is required", http.StatusBadRequest)
 		return
 	}
-	if req.BuyerName == "" || req.BuyerEmail == "" {
-		writeError(w, "buyer name and email are required", http.StatusBadRequest)
+	if req.BuyerName == "" || req.BuyerEmail == "" || req.BuyerPhone == "" {
+		writeError(w, "buyer name, email and phone are required", http.StatusBadRequest)
 		return
 	}
 
@@ -57,6 +58,7 @@ func (h *PaymentHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		Numbers:    req.Numbers,
 		BuyerName:  req.BuyerName,
 		BuyerEmail: req.BuyerEmail,
+		BuyerPhone: req.BuyerPhone,
 	})
 	if err != nil {
 		if errors.Is(err, service.ErrRaffleNotFound) {

@@ -29,6 +29,7 @@ type Payment struct {
 	TicketIDs      []primitive.ObjectID `bson:"ticketIds" json:"ticketIds"`
 	BuyerName      string               `bson:"buyerName" json:"buyerName"`
 	BuyerEmail     string               `bson:"buyerEmail" json:"buyerEmail"`
+	BuyerPhone     string               `bson:"buyerPhone,omitempty" json:"buyerPhone,omitempty"`
 	CheckoutURL    string               `bson:"checkoutUrl,omitempty" json:"checkoutUrl,omitempty"`
 	InvoiceSlug    string               `bson:"invoiceSlug,omitempty" json:"invoiceSlug,omitempty"`
 	TransactionNSU string               `bson:"transactionNsu,omitempty" json:"transactionNsu,omitempty"`
