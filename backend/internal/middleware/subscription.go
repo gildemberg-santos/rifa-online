@@ -32,6 +32,11 @@ func RequiresSubscription(userRepo *repository.UserRepo) func(http.Handler) http
 				return
 			}
 
+			if user.Role == model.RoleAdmin {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			if user.SubscriptionStatus != model.SubscriptionStatusActive {
 				http.Error(w, `{"error":"subscription is not active"}`, http.StatusForbidden)
 				return

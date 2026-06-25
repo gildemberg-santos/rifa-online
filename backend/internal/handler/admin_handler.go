@@ -135,12 +135,60 @@ func (h *AdminHandler) UpdateUserSubscription(w http.ResponseWriter, r *http.Req
 }
 
 func (h *AdminHandler) Raffles(w http.ResponseWriter, r *http.Request) {
-	raffles, err := h.raffleRepo.FindAll(r.Context())
+	ctx := r.Context()
+	raffles, err := h.raffleRepo.FindAll(ctx)
 	if err != nil {
 		writeError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, raffles)
+
+	items := make([]adminRaffleItem, 0, len(raffles))
+	for _, raffle := range raffles {
+		organizerName := ""
+		if user, err := h.userRepo.FindByID(ctx, raffle.OrganizerID); err == nil {
+			organizerName = user.Name
+		}
+
+		soldTickets, _ := h.ticketRepo.CountByRaffleAndStatus(ctx, raffle.ID, model.TicketStatusPaid)
+		paidTickets, _ := h.ticketRepo.CountByRaffleAndStatus(ctx, raffle.ID, model.TicketStatusPaid)
+		revenue := soldTickets * int64(raffle.TicketPrice)
+
+		items = append(items, adminRaffleItem{
+			ID:            raffle.ID,
+			OrganizerID:   raffle.OrganizerID,
+			OrganizerName: organizerName,
+			Title:         raffle.Title,
+			TicketPrice:   raffle.TicketPrice,
+			MaxNumbers:    raffle.MaxNumbers,
+			DrawDate:      raffle.DrawDate,
+			ImageURL:      raffle.ImageURL,
+			Status:        string(raffle.Status),
+			WinnerNumber:  raffle.WinnerNumber,
+			CreatedAt:     raffle.CreatedAt,
+			SoldTickets:   soldTickets,
+			PaidTickets:   paidTickets,
+			Revenue:       revenue,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, items)
+}
+
+type adminRaffleItem struct {
+	ID              primitive.ObjectID `json:"id"`
+	OrganizerID     primitive.ObjectID `json:"organizerId"`
+	OrganizerName   string             `json:"organizerName"`
+	Title           string             `json:"title"`
+	TicketPrice     int                `json:"ticketPrice"`
+	MaxNumbers      int                `json:"maxNumbers"`
+	DrawDate        time.Time          `json:"drawDate"`
+	ImageURL        string             `json:"imageUrl,omitempty"`
+	Status          string             `json:"status"`
+	WinnerNumber    *int               `json:"winnerNumber,omitempty"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	SoldTickets     int64              `json:"soldTickets"`
+	PaidTickets     int64              `json:"paidTickets"`
+	Revenue         int64              `json:"revenue"`
 }
 
 type adminStats struct {
