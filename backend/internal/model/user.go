@@ -28,6 +28,7 @@ type User struct {
 	Email                string              `bson:"email" json:"email"`
 	PasswordHash         string              `bson:"passwordHash" json:"-"`
 	Role                 Role                `bson:"role" json:"role"`
+	Phone                string              `bson:"phone,omitempty" json:"phone,omitempty"`
 	InfinitePayHandle    string              `bson:"infinitePayHandle,omitempty" json:"infinitePayHandle,omitempty"`
 	SubscriptionStatus   SubscriptionStatus   `bson:"subscriptionStatus" json:"subscriptionStatus"`
 	SubscriptionExpiresAt *time.Time          `bson:"subscriptionExpiresAt,omitempty" json:"subscriptionExpiresAt,omitempty"`

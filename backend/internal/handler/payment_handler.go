@@ -51,9 +51,19 @@ func (h *PaymentHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "at least one number is required", http.StatusBadRequest)
 		return
 	}
-	if req.BuyerName == "" || req.BuyerPhone == "" {
-		writeError(w, "buyer name and phone are required", http.StatusBadRequest)
+	if req.BuyerName == "" {
+		writeError(w, "buyer name is required", http.StatusBadRequest)
 		return
+	}
+
+	phone := req.BuyerPhone
+	if phone == "" {
+		userID := middleware.UserIDFromContext(r.Context())
+		if oid, err := primitive.ObjectIDFromHex(userID); err == nil {
+			if user, err := h.userRepo.FindByID(r.Context(), oid); err == nil {
+				phone = user.Phone
+			}
+		}
 	}
 
 	result, err := h.paymentService.CreateCheckout(r.Context(), service.CheckoutInput{
@@ -61,7 +71,7 @@ func (h *PaymentHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		Numbers:    req.Numbers,
 		BuyerName:  req.BuyerName,
 		BuyerEmail: req.BuyerEmail,
-		BuyerPhone: req.BuyerPhone,
+		BuyerPhone: phone,
 	})
 	if err != nil {
 		if errors.Is(err, service.ErrRaffleNotFound) {

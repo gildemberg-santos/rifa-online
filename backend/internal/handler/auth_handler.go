@@ -44,6 +44,7 @@ type userResponse struct {
 	Name               string                  `json:"name"`
 	Email              string                  `json:"email"`
 	Role               model.Role              `json:"role"`
+	Phone              string                  `json:"phone,omitempty"`
 	InfinitePayHandle  string                  `json:"infinitePayHandle,omitempty"`
 	SubscriptionStatus model.SubscriptionStatus `json:"subscriptionStatus"`
 }
@@ -140,6 +141,7 @@ func toUserResponse(user *model.User) *userResponse {
 		Name:               user.Name,
 		Email:              user.Email,
 		Role:               role,
+		Phone:              user.Phone,
 		InfinitePayHandle:  user.InfinitePayHandle,
 		SubscriptionStatus: status,
 	}

@@ -136,6 +136,7 @@ type UpdateProfileInput struct {
 	Name     string `json:"name,omitempty"`
 	Email    string `json:"email,omitempty"`
 	Password string `json:"password,omitempty"`
+	Phone    string `json:"phone,omitempty"`
 }
 
 func (s *AuthService) UpdateProfile(ctx context.Context, userID string, input UpdateProfileInput) (*model.User, error) {
@@ -156,6 +157,9 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID string, input Up
 			return nil, ErrEmailAlreadyRegistered
 		}
 		updates["email"] = email
+	}
+	if input.Phone != "" {
+		updates["phone"] = input.Phone
 	}
 	if input.Password != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), 12)
