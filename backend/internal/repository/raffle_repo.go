@@ -19,24 +19,6 @@ func NewRaffleRepo(db *mongo.Database) *RaffleRepo {
 	return &RaffleRepo{coll: db.Collection("raffles")}
 }
 
-func (r *RaffleRepo) Init(ctx context.Context) error {
-	_, err := r.coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		{
-			Keys: bson.D{
-				{Key: "organizerId", Value: 1},
-				{Key: "status", Value: 1},
-			},
-		},
-		{
-			Keys: bson.D{
-				{Key: "status", Value: 1},
-				{Key: "drawDate", Value: 1},
-			},
-		},
-	})
-	return err
-}
-
 func (r *RaffleRepo) Insert(ctx context.Context, raffle *model.Raffle) error {
 	raffle.ID = primitive.NewObjectID()
 	raffle.CreatedAt = time.Now()

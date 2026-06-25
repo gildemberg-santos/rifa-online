@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	defaultBaseURL = "https://api.checkout.infinitepay.io"
 	defaultTimeout = 30 * time.Second
 )
 
@@ -22,10 +21,10 @@ type Client struct {
 	redirectURL string
 }
 
-func NewClient(handle, webhookURL, redirectURL string) *Client {
+func NewClient(handle, webhookURL, redirectURL, baseURL string) *Client {
 	return &Client{
 		httpClient:  &http.Client{Timeout: defaultTimeout},
-		baseURL:     defaultBaseURL,
+		baseURL:     baseURL,
 		handle:      handle,
 		webhookURL:  webhookURL,
 		redirectURL: redirectURL,

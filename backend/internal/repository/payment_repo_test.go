@@ -12,11 +12,6 @@ import (
 func TestPaymentRepo(t *testing.T) {
 	ctx := context.Background()
 	repo := NewPaymentRepo(testDB)
-
-	if err := repo.Init(ctx); err != nil {
-		t.Fatalf("Init: %v", err)
-	}
-
 	raffleID := primitive.NewObjectID()
 
 	makePayment := func(email, slug string) *model.Payment {

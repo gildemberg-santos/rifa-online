@@ -23,7 +23,23 @@ func (h *SubscriptionHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	result, err := h.subscriptionSvc.CreateSubscriptionCheckout(r.Context(), userID)
 	if err != nil {
 		status := http.StatusInternalServerError
-		if errors.Is(err, service.ErrSubscriptionAlreadyActive) || errors.Is(err, service.ErrPendingSubscriptionExists) {
+		if errors.Is(err, service.ErrSubscriptionAlreadyActive) {
+			status = http.StatusConflict
+		}
+		writeError(w, err.Error(), status)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *SubscriptionHandler) DevCheckout(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+
+	result, err := h.subscriptionSvc.CreateDevSubscriptionCheckout(r.Context(), userID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, service.ErrSubscriptionAlreadyActive) {
 			status = http.StatusConflict
 		}
 		writeError(w, err.Error(), status)

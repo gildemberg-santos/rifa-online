@@ -76,6 +76,11 @@ async function submit() {
             <span v-else>Entrar</span>
           </button>
         </form>
+
+          <p class="text-center text-sm text-gray-500 mt-6">
+            Não tem conta?
+            <router-link to="/register" class="text-indigo-600 hover:text-indigo-700 font-medium">Criar conta</router-link>
+          </p>
       </div>
     </div>
   </div>

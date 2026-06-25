@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/user/rifa-online/internal/model"
 )
@@ -18,14 +17,6 @@ type WebhookRepo struct {
 
 func NewWebhookRepo(db *mongo.Database) *WebhookRepo {
 	return &WebhookRepo{coll: db.Collection("webhook_events")}
-}
-
-func (r *WebhookRepo) Init(ctx context.Context) error {
-	_, err := r.coll.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys:    bson.D{{Key: "eventId", Value: 1}},
-		Options: options.Index().SetUnique(true),
-	})
-	return err
 }
 
 func (r *WebhookRepo) Insert(ctx context.Context, event *model.WebhookEvent) error {

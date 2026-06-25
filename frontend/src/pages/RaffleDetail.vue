@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue"
-import { useRoute } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import { api } from "../utils/api"
 import { useAuthStore } from "../stores/auth"
 import NumberGrid from "../components/NumberGrid.vue"
@@ -32,6 +32,7 @@ interface RaffleDetail {
 }
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const detail = ref<RaffleDetail | null>(null)
 const loading = ref(true)
@@ -53,6 +54,12 @@ function shareRaffle() {
 
 onMounted(async () => {
   try {
+    const status = await api.get<{ subscriptionStatus: string }>("/subscription/status")
+    if (status.subscriptionStatus !== "ACTIVE") {
+      router.push({ name: "subscription" })
+      return
+    }
+
     detail.value = await api.get<RaffleDetail>(`/raffles/${route.params.id}`)
   } catch (e) {
     console.error("Failed to load raffle detail", e)

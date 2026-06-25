@@ -37,8 +37,10 @@ async function createCheckout() {
   error.value = ""
   trialActivated.value = false
 
+  const checkoutPath = import.meta.env.DEV ? "/subscription/dev-checkout" : "/subscription/checkout"
+
   try {
-    const result = await api.post<{ checkoutUrl?: string; isTrial: boolean }>("/subscription/checkout")
+    const result = await api.post<{ checkoutUrl?: string; isTrial: boolean }>(checkoutPath)
 
     if (result.isTrial) {
       trialActivated.value = true
@@ -59,8 +61,6 @@ async function createCheckout() {
     const msg = e?.message || ""
     if (msg.includes("já possui uma assinatura ativa")) {
       error.value = "Sua assinatura já está ativa. Renove quando estiver próxima do vencimento."
-    } else if (msg.includes("pagamento pendente")) {
-      error.value = "Você já possui um pagamento pendente. Aguarde a confirmação ou tente novamente mais tarde."
     } else {
       error.value = "Erro ao criar checkout. Tente novamente."
     }
@@ -74,12 +74,17 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("pt-BR")
 }
 
+const isExpired = computed(() => {
+  if (!subscriptionExpiresAt.value) return false
+  return new Date(subscriptionExpiresAt.value) < new Date()
+})
+
 const showTrialInfo = computed(() =>
-  subscriptionStatus.value !== "ACTIVE" && !hasSubscriptionBefore.value,
+  !hasSubscriptionBefore.value && (subscriptionStatus.value !== "ACTIVE" || isExpired.value),
 )
 
 const canCreateCheckout = computed(() =>
-  subscriptionStatus.value !== "ACTIVE" || !hasSubscriptionBefore.value,
+  subscriptionStatus.value !== "ACTIVE" || !hasSubscriptionBefore.value || isExpired.value,
 )
 </script>
 
@@ -130,16 +135,19 @@ const canCreateCheckout = computed(() =>
           </div>
         </div>
 
-        <div class="mb-6 p-4 rounded-xl border" :class="subscriptionStatus === 'ACTIVE' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'">
-          <p class="text-sm font-medium" :class="subscriptionStatus === 'ACTIVE' ? 'text-green-700' : 'text-red-700'">
-            <template v-if="subscriptionStatus === 'ACTIVE'">
+        <div class="mb-6 p-4 rounded-xl border" :class="subscriptionStatus === 'ACTIVE' && !isExpired ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'">
+          <p class="text-sm font-medium" :class="subscriptionStatus === 'ACTIVE' && !isExpired ? 'text-green-700' : 'text-red-700'">
+            <template v-if="isExpired">
+              Sua assinatura expirou
+            </template>
+            <template v-else-if="subscriptionStatus === 'ACTIVE'">
               Sua assinatura está ativa
             </template>
             <template v-else>
               Sua assinatura está inativa
             </template>
           </p>
-          <p v-if="subscriptionExpiresAt" class="text-xs mt-1" :class="subscriptionStatus === 'ACTIVE' ? 'text-green-600' : 'text-red-600'">
+          <p v-if="subscriptionExpiresAt" class="text-xs mt-1" :class="subscriptionStatus === 'ACTIVE' && !isExpired ? 'text-green-600' : 'text-red-600'">
             Válida até {{ formatDate(subscriptionExpiresAt) }}
           </p>
         </div>
@@ -182,7 +190,7 @@ const canCreateCheckout = computed(() =>
           </span>
         </button>
 
-        <div v-if="subscriptionStatus === 'ACTIVE' && !showTrialInfo" class="text-center">
+        <div v-if="subscriptionStatus === 'ACTIVE' && !showTrialInfo && !isExpired" class="text-center">
           <p class="text-sm text-green-600 font-medium">Sua assinatura está vigente</p>
           <p v-if="subscriptionExpiresAt" class="text-xs text-gray-500 mt-1">Válida até {{ formatDate(subscriptionExpiresAt) }}</p>
         </div>

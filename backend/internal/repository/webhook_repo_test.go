@@ -10,11 +10,6 @@ import (
 func TestWebhookRepo(t *testing.T) {
 	ctx := context.Background()
 	repo := NewWebhookRepo(testDB)
-
-	if err := repo.Init(ctx); err != nil {
-		t.Fatalf("Init: %v", err)
-	}
-
 	t.Run("Insert and FindByEventID", func(t *testing.T) {
 		event := &model.WebhookEvent{
 			EventID:   "evt_001",

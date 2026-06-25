@@ -18,7 +18,6 @@ var (
 	ErrSubscriptionNotActive    = errors.New("subscription is not active")
 	ErrNoInfinitePayHandle      = errors.New("infinitePay handle not configured")
 	ErrSubscriptionAlreadyActive = errors.New("você já possui uma assinatura ativa")
-	ErrPendingSubscriptionExists = errors.New("você já possui um pagamento de assinatura pendente")
 )
 
 type SubscriptionService struct {
@@ -68,8 +67,9 @@ func (s *SubscriptionService) CreateSubscriptionCheckout(ctx context.Context, us
 	if err != nil {
 		return nil, err
 	}
-	if len(pending) > 0 {
-		return nil, ErrPendingSubscriptionExists
+	for _, p := range pending {
+		now := time.Now()
+		s.paymentRepo.UpdateStatus(ctx, p.ID, model.PaymentStatusExpired, &now)
 	}
 
 	if !user.HasSubscriptionBefore && user.SubscriptionStatus != model.SubscriptionStatusActive {
@@ -194,6 +194,62 @@ func (s *SubscriptionService) GetStatus(ctx context.Context, userID string) (*mo
 	}
 
 	return user, nil
+}
+
+func (s *SubscriptionService) CreateDevSubscriptionCheckout(ctx context.Context, userID string) (*SubscriptionCheckoutResult, error) {
+	oid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, errors.New("invalid user id")
+	}
+
+	user, err := s.userRepo.FindByID(ctx, oid)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+
+	if user.SubscriptionStatus == model.SubscriptionStatusActive {
+		if user.SubscriptionExpiresAt == nil || time.Now().Before(*user.SubscriptionExpiresAt) {
+			return nil, ErrSubscriptionAlreadyActive
+		}
+	}
+
+	pending, err := s.paymentRepo.FindPendingSubscriptionByUserID(ctx, oid)
+	if err != nil {
+		return nil, err
+	}
+	if len(pending) > 0 {
+		// Expire pending payments
+		for _, p := range pending {
+			now := time.Now()
+			s.paymentRepo.UpdateStatus(ctx, p.ID, model.PaymentStatusExpired, &now)
+		}
+	}
+
+	payment := &model.Payment{
+		Type:       model.PaymentTypeSubscription,
+		UserID:     oid,
+		BuyerEmail: user.Email,
+		Amount:     model.SubscriptionPrice,
+		Status:     model.PaymentStatusPaid,
+		PaymentMethod: model.PaymentMethodPIX,
+	}
+
+	if err := s.paymentRepo.Insert(ctx, payment); err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	if err := s.paymentRepo.UpdateStatus(ctx, payment.ID, model.PaymentStatusPaid, &now); err != nil {
+		return nil, err
+	}
+
+	if err := s.ActivateSubscription(ctx, payment); err != nil {
+		return nil, err
+	}
+
+	return &SubscriptionCheckoutResult{
+		IsTrial: false,
+	}, nil
 }
 
 func (s *SubscriptionService) UpdateInfinitePayHandle(ctx context.Context, userID string, handle string) (*model.User, error) {

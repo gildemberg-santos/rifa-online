@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/user/rifa-online/internal/model"
 )
@@ -18,14 +17,6 @@ type UserRepo struct {
 
 func NewUserRepo(db *mongo.Database) *UserRepo {
 	return &UserRepo{coll: db.Collection("users")}
-}
-
-func (r *UserRepo) Init(ctx context.Context) error {
-	_, err := r.coll.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys:    bson.D{{Key: "email", Value: 1}},
-		Options: options.Index().SetUnique(true),
-	})
-	return err
 }
 
 func (r *UserRepo) Insert(ctx context.Context, user *model.User) error {

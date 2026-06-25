@@ -13,11 +13,6 @@ import (
 func TestRaffleRepo(t *testing.T) {
 	ctx := context.Background()
 	repo := NewRaffleRepo(testDB)
-
-	if err := repo.Init(ctx); err != nil {
-		t.Fatalf("Init: %v", err)
-	}
-
 	makeRaffle := func(title string, status model.RaffleStatus) *model.Raffle {
 		return &model.Raffle{
 			OrganizerID: primitive.NewObjectID(),

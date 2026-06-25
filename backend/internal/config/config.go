@@ -14,8 +14,10 @@ type Config struct {
 	MongoDBName       string
 	RedisURI          string
 	JWTSecret         string
-	InfinitePayHandle string
-	FrontendURL       string
+	AppEnv            string
+	InfinitePayHandle  string
+	InfinitePayBaseURL string
+	FrontendURL        string
 	LogLevel          slog.Level
 	LogFormat         string
 }
@@ -34,6 +36,9 @@ func Load() *Config {
 	}
 
 	format := getEnv("LOG_FORMAT", "text")
+	appEnv := getEnv("APP_ENV", "development")
+
+	infinitePayBaseURL := getEnv("INFINITEPAY_BASE_URL", "https://api.checkout.infinitepay.io")
 
 	return &Config{
 		Port:              getEnvInt("PORT", 8080),
@@ -41,8 +46,10 @@ func Load() *Config {
 		MongoDBName:       getEnv("MONGODB_DB_NAME", "rifaonline"),
 		RedisURI:          getEnv("REDIS_URI", "redis://localhost:6379"),
 		JWTSecret:         getEnv("JWT_SECRET", "change-me"),
-		InfinitePayHandle: getEnv("INFINITEPAY_HANDLE", ""),
-		FrontendURL:       getEnv("FRONTEND_URL", "http://localhost:5173"),
+		AppEnv:            appEnv,
+		InfinitePayHandle:  getEnv("INFINITEPAY_HANDLE", ""),
+		InfinitePayBaseURL: infinitePayBaseURL,
+		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
 		LogLevel:          level,
 		LogFormat:         format,
 	}

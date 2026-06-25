@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/user/rifa-online/internal/model"
 )
@@ -18,19 +17,6 @@ type PaymentRepo struct {
 
 func NewPaymentRepo(db *mongo.Database) *PaymentRepo {
 	return &PaymentRepo{coll: db.Collection("payments")}
-}
-
-func (r *PaymentRepo) Init(ctx context.Context) error {
-	_, err := r.coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		{
-			Keys:    bson.D{{Key: "invoiceSlug", Value: 1}},
-			Options: options.Index().SetUnique(true).SetSparse(true),
-		},
-		{
-			Keys: bson.D{{Key: "buyerEmail", Value: 1}},
-		},
-	})
-	return err
 }
 
 func (r *PaymentRepo) Insert(ctx context.Context, payment *model.Payment) error {

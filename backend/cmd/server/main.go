@@ -22,6 +22,7 @@ import (
 	"github.com/user/rifa-online/internal/config"
 	"github.com/user/rifa-online/internal/handler"
 	"github.com/user/rifa-online/internal/middleware"
+	"github.com/user/rifa-online/internal/migrations"
 	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/repository"
 	"github.com/user/rifa-online/internal/service"
@@ -70,24 +71,8 @@ func main() {
 	paymentRepo := repository.NewPaymentRepo(db)
 	webhookRepo := repository.NewWebhookRepo(db)
 
-	if err := userRepo.Init(ctx); err != nil {
-		logger.Error("failed to init user repo", "error", err)
-		os.Exit(1)
-	}
-	if err := raffleRepo.Init(ctx); err != nil {
-		logger.Error("failed to init raffle repo", "error", err)
-		os.Exit(1)
-	}
-	if err := ticketRepo.Init(ctx); err != nil {
-		logger.Error("failed to init ticket repo", "error", err)
-		os.Exit(1)
-	}
-	if err := paymentRepo.Init(ctx); err != nil {
-		logger.Error("failed to init payment repo", "error", err)
-		os.Exit(1)
-	}
-	if err := webhookRepo.Init(ctx); err != nil {
-		logger.Error("failed to init webhook repo", "error", err)
+	if err := migrations.Run(ctx, db); err != nil {
+		logger.Error("failed to run migrations", "error", err)
 		os.Exit(1)
 	}
 
@@ -101,7 +86,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService)
 
 	webhookURL := cfg.FrontendURL + "/api/v1/webhooks/infinitepay"
-	infiniteClient := infinitepay.NewClient(cfg.InfinitePayHandle, webhookURL, cfg.FrontendURL)
+	infiniteClient := infinitepay.NewClient(cfg.InfinitePayHandle, webhookURL, cfg.FrontendURL, cfg.InfinitePayBaseURL)
 
 	raffleService := service.NewRaffleService(raffleRepo, ticketRepo, paymentRepo, userRepo)
 	paymentService := service.NewPaymentService(raffleRepo, ticketRepo, paymentRepo, userRepo, infiniteClient, redisClient, cfg)
@@ -138,9 +123,17 @@ func main() {
 			r.Post("/refresh", authHandler.Refresh)
 		})
 
+		subMw := middleware.RequiresSubscription(userRepo)
+
 		r.Route("/raffles", func(r chi.Router) {
 			r.Get("/", raffleHandler.List)
-			r.Get("/{id}", raffleHandler.GetDetail)
+
+			r.Group(func(r chi.Router) {
+				r.Use(authMw)
+				r.Use(subMw)
+				r.Get("/{id}", raffleHandler.GetDetail)
+				r.Post("/{id}/checkout", paymentHandler.Checkout)
+			})
 
 			r.Group(func(r chi.Router) {
 				r.Use(authMw)
@@ -151,10 +144,6 @@ func main() {
 			r.Post("/{id}/draw", raffleHandler.Draw)
 			r.Get("/my", raffleHandler.MyRaffles)
 			r.Get("/{id}/stats", raffleHandler.Stats)
-			})
-
-			r.Group(func(r chi.Router) {
-				r.Post("/{id}/checkout", paymentHandler.Checkout)
 			})
 		})
 
@@ -187,6 +176,9 @@ func main() {
 		r.Route("/subscription", func(r chi.Router) {
 			r.Use(authMw)
 			r.Post("/checkout", subscriptionHandler.Checkout)
+			if cfg.AppEnv == "development" {
+				r.Post("/dev-checkout", subscriptionHandler.DevCheckout)
+			}
 			r.Get("/status", subscriptionHandler.Status)
 		})
 
@@ -194,6 +186,8 @@ func main() {
 			r.Use(authMw)
 			r.Use(middleware.Admin(userRepo))
 			r.Get("/users", adminHandler.Users)
+			r.Get("/users/{id}", adminHandler.UserDetails)
+			r.Put("/users/{id}/subscription", adminHandler.UpdateUserSubscription)
 			r.Get("/raffles", adminHandler.Raffles)
 			r.Get("/stats", adminHandler.Stats)
 		})

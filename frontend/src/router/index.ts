@@ -14,11 +14,13 @@ const router = createRouter({
       path: "/raffles/:id",
       name: "raffle-detail",
       component: () => import("../pages/RaffleDetail.vue"),
+      meta: { requiresAuth: true },
     },
     {
       path: "/raffles/:id/checkout",
       name: "checkout",
       component: () => import("../pages/Checkout.vue"),
+      meta: { requiresAuth: true },
     },
     {
       path: "/raffles/:id/result",
@@ -40,6 +42,11 @@ const router = createRouter({
       path: "/login",
       name: "login",
       component: () => import("../pages/Login.vue"),
+    },
+    {
+      path: "/register",
+      name: "register",
+      component: () => import("../pages/Register.vue"),
     },
 
     {

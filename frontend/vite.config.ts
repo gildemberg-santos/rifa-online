@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [vue(), tailwindcss()],
   server: {
     port: 5173,
+    allowedHosts: [".ngrok-free.dev"],
     proxy: {
       "/api": {
         target: "http://localhost:8081",

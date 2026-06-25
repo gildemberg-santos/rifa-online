@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/user/rifa-online/internal/model"
 )
@@ -18,25 +17,6 @@ type TicketRepo struct {
 
 func NewTicketRepo(db *mongo.Database) *TicketRepo {
 	return &TicketRepo{coll: db.Collection("tickets")}
-}
-
-func (r *TicketRepo) Init(ctx context.Context) error {
-	_, err := r.coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		{
-			Keys: bson.D{
-				{Key: "raffleId", Value: 1},
-				{Key: "number", Value: 1},
-			},
-			Options: options.Index().SetUnique(true),
-		},
-		{
-			Keys: bson.D{
-				{Key: "raffleId", Value: 1},
-				{Key: "status", Value: 1},
-			},
-		},
-	})
-	return err
 }
 
 func (r *TicketRepo) Insert(ctx context.Context, ticket *model.Ticket) error {

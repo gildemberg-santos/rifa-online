@@ -11,11 +11,6 @@ import (
 func TestTicketRepo(t *testing.T) {
 	ctx := context.Background()
 	repo := NewTicketRepo(testDB)
-
-	if err := repo.Init(ctx); err != nil {
-		t.Fatalf("Init: %v", err)
-	}
-
 	raffleID := primitive.NewObjectID()
 
 	makeTicket := func(number int) model.Ticket {
