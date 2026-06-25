@@ -54,7 +54,6 @@ async function submit() {
     const result = await api.post<{ checkoutUrl: string }>(`/raffles/${raffleId}/checkout`, {
       numbers: numbers.value,
       buyerName: buyerName.value,
-      buyerEmail: "",
       buyerPhone: buyerPhone.value.replace(/\D/g, ""),
     })
     window.location.href = result.checkoutUrl

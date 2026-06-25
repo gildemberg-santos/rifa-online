@@ -119,7 +119,7 @@ func (h *PaymentHandler) ConfirmPayment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.ticketRepo.MarkAsPaid(r.Context(), payment.TicketIDs, payment.BuyerName, payment.BuyerEmail, payment.ID.Hex()); err != nil {
+	if err := h.ticketRepo.MarkAsPaid(r.Context(), payment.TicketIDs, payment.BuyerName, payment.BuyerPhone, payment.ID.Hex()); err != nil {
 		writeError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -128,13 +128,13 @@ func (h *PaymentHandler) ConfirmPayment(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *PaymentHandler) MyPayments(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
-	if email == "" {
-		writeError(w, "email query parameter is required", http.StatusBadRequest)
+	phone := r.URL.Query().Get("phone")
+	if phone == "" {
+		writeError(w, "phone query parameter is required", http.StatusBadRequest)
 		return
 	}
 
-	payments, err := h.paymentService.GetMyPayments(r.Context(), email)
+	payments, err := h.paymentRepo.FindByBuyerPhone(r.Context(), phone)
 	if err != nil {
 		writeError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -156,13 +156,13 @@ func (h *PaymentHandler) GetPayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PaymentHandler) MyTickets(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
-	if email == "" {
-		writeError(w, "email query parameter is required", http.StatusBadRequest)
+	phone := r.URL.Query().Get("phone")
+	if phone == "" {
+		writeError(w, "phone query parameter is required", http.StatusBadRequest)
 		return
 	}
 
-	tickets, err := h.paymentService.GetMyTickets(r.Context(), email)
+	tickets, err := h.ticketRepo.FindPaidByPhone(r.Context(), phone)
 	if err != nil {
 		writeError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -186,7 +186,7 @@ func (h *PaymentHandler) MyPurchases(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items, err := h.paymentService.GetMyPurchases(r.Context(), oid, user.Email)
+	items, err := h.paymentService.GetMyPurchases(r.Context(), oid, user.Phone)
 	if err != nil {
 		writeError(w, err.Error(), http.StatusInternalServerError)
 		return

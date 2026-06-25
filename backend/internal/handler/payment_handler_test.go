@@ -92,9 +92,8 @@ func TestPaymentHandler_ConfirmPayment_InvalidHex(t *testing.T) {
 	}
 }
 
-func TestPaymentHandler_MyPayments_MissingEmail(t *testing.T) {
-	paymentSvc := service.NewPaymentService(nil, nil, nil, nil, nil, nil, nil)
-	handler := NewPaymentHandler(paymentSvc, nil, nil, nil)
+func TestPaymentHandler_MyPayments_MissingPhone(t *testing.T) {
+	handler := NewPaymentHandler(nil, nil, nil, nil)
 
 	req := makeRequest("GET", "/api/v1/payments/mine", "")
 	resp := httptest.NewRecorder()
@@ -123,9 +122,8 @@ func TestPaymentHandler_GetPayment(t *testing.T) {
 	}
 }
 
-func TestPaymentHandler_MyTickets_MissingEmail(t *testing.T) {
-	paymentSvc := service.NewPaymentService(nil, nil, nil, nil, nil, nil, nil)
-	handler := NewPaymentHandler(paymentSvc, nil, nil, nil)
+func TestPaymentHandler_MyTickets_MissingPhone(t *testing.T) {
+	handler := NewPaymentHandler(nil, nil, nil, nil)
 
 	req := makeRequest("GET", "/api/v1/payments/tickets", "")
 	resp := httptest.NewRecorder()

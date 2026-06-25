@@ -20,7 +20,7 @@ type Ticket struct {
 	Number              int                `bson:"number" json:"number"`
 	Status              TicketStatus       `bson:"status" json:"status"`
 	BuyerName           string             `bson:"buyerName,omitempty" json:"buyerName,omitempty"`
-	BuyerEmail          string             `bson:"buyerEmail,omitempty" json:"buyerEmail,omitempty"`
+	BuyerPhone          string             `bson:"buyerPhone,omitempty" json:"buyerPhone,omitempty"`
 	PaymentID           string             `bson:"paymentId,omitempty" json:"paymentId,omitempty"`
 	ReservedAt          *time.Time         `bson:"reservedAt,omitempty" json:"reservedAt,omitempty"`
 	PaidAt              *time.Time         `bson:"paidAt,omitempty" json:"paidAt,omitempty"`

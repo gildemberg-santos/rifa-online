@@ -59,7 +59,7 @@ func (h *AdminHandler) UserDetails(w http.ResponseWriter, r *http.Request) {
 
 	raffles, _ := h.raffleRepo.FindByOrganizer(ctx, oid)
 	payments, _ := h.paymentRepo.FindByUserID(ctx, oid)
-	tickets, _ := h.ticketRepo.FindPaidByEmail(ctx, user.Email)
+	tickets, _ := h.ticketRepo.FindPaidByPhone(ctx, user.Phone)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"user":     user,

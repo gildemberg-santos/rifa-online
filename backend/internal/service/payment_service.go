@@ -124,11 +124,6 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 
 	totalAmount := raffle.TicketPrice * len(input.Numbers)
 
-	buyerEmail := input.BuyerEmail
-	if buyerEmail == "" {
-		buyerEmail = input.BuyerPhone + "@c.rifa"
-	}
-
 	organizer, err := s.userRepo.FindByID(ctx, raffle.OrganizerID)
 	if err != nil {
 		return nil, ErrOrganizerNotFound
@@ -144,7 +139,6 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		RaffleID:   raffleID,
 		TicketIDs:  ticketIDs,
 		BuyerName:  input.BuyerName,
-		BuyerEmail: buyerEmail,
 		BuyerPhone: input.BuyerPhone,
 		Amount:     totalAmount,
 		Status:     model.PaymentStatusPending,
@@ -169,7 +163,6 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		WebhookURL: webhookURL,
 		Customer: &infinitepay.Customer{
 			Name:        input.BuyerName,
-			Email:       buyerEmail,
 			PhoneNumber: input.BuyerPhone,
 		},
 	})
@@ -202,18 +195,18 @@ type MyPurchaseItem struct {
 	TicketNumbers []int     `json:"ticketNumbers,omitempty"`
 }
 
-func (s *PaymentService) GetMyPurchases(ctx context.Context, userID primitive.ObjectID, email string) ([]MyPurchaseItem, error) {
-	paymentsByEmail, _ := s.paymentRepo.FindByEmail(ctx, email)
+func (s *PaymentService) GetMyPurchases(ctx context.Context, userID primitive.ObjectID, phone string) ([]MyPurchaseItem, error) {
+	paymentsByPhone, _ := s.paymentRepo.FindByBuyerPhone(ctx, phone)
 	paymentsByUser, _ := s.paymentRepo.FindByUserID(ctx, userID)
 
 	seen := make(map[string]bool)
 	merged := make([]model.Payment, 0)
 
-	for i := range paymentsByEmail {
-		id := paymentsByEmail[i].ID.Hex()
+	for i := range paymentsByPhone {
+		id := paymentsByPhone[i].ID.Hex()
 		if !seen[id] {
 			seen[id] = true
-			merged = append(merged, paymentsByEmail[i])
+			merged = append(merged, paymentsByPhone[i])
 		}
 	}
 	for i := range paymentsByUser {
@@ -258,20 +251,12 @@ func (s *PaymentService) GetMyPurchases(ctx context.Context, userID primitive.Ob
 	return result, nil
 }
 
-func (s *PaymentService) GetMyPayments(ctx context.Context, email string) ([]model.Payment, error) {
-	return s.paymentRepo.FindByEmail(ctx, email)
-}
-
 func (s *PaymentService) GetPaymentByID(ctx context.Context, paymentID string) (*model.Payment, error) {
 	oid, err := primitive.ObjectIDFromHex(paymentID)
 	if err != nil {
 		return nil, errors.New("invalid payment id")
 	}
 	return s.paymentRepo.FindByID(ctx, oid)
-}
-
-func (s *PaymentService) GetMyTickets(ctx context.Context, email string) ([]model.Ticket, error) {
-	return s.ticketRepo.FindPaidByEmail(ctx, email)
 }
 
 

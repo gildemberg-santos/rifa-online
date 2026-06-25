@@ -85,13 +85,13 @@ func (r *TicketRepo) Update(ctx context.Context, ticket *model.Ticket) error {
 	return err
 }
 
-func (r *TicketRepo) MarkAsPaid(ctx context.Context, ids []primitive.ObjectID, buyerName, buyerEmail, paymentID string) error {
+func (r *TicketRepo) MarkAsPaid(ctx context.Context, ids []primitive.ObjectID, buyerName, buyerPhone, paymentID string) error {
 	now := time.Now()
 	_, err := r.coll.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": ids}}, bson.M{
 		"$set": bson.M{
 			"status":     model.TicketStatusPaid,
 			"buyerName":  buyerName,
-			"buyerEmail": buyerEmail,
+			"buyerPhone": buyerPhone,
 			"paymentId":  paymentID,
 			"paidAt":     now,
 		},
@@ -126,9 +126,9 @@ func (r *TicketRepo) FindPaidByRaffle(ctx context.Context, raffleID primitive.Ob
 	return r.FindByRaffleAndStatus(ctx, raffleID, model.TicketStatusPaid)
 }
 
-func (r *TicketRepo) FindPaidByEmail(ctx context.Context, email string) ([]model.Ticket, error) {
+func (r *TicketRepo) FindPaidByPhone(ctx context.Context, phone string) ([]model.Ticket, error) {
 	cursor, err := r.coll.Find(ctx, bson.M{
-		"buyerEmail": email,
+		"buyerPhone": phone,
 		"status":     model.TicketStatusPaid,
 	})
 	if err != nil {
@@ -163,7 +163,7 @@ func (r *TicketRepo) FindReservedOlderThan(ctx context.Context, cutoff time.Time
 func (r *TicketRepo) ReleaseReservations(ctx context.Context, ids []primitive.ObjectID) error {
 	_, err := r.coll.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": ids}}, bson.M{
 		"$set":   bson.M{"status": model.TicketStatusAvailable},
-		"$unset": bson.M{"reservedAt": "", "buyerName": "", "buyerEmail": "", "paymentId": ""},
+		"$unset": bson.M{"reservedAt": "", "buyerName": "", "buyerPhone": "", "paymentId": ""},
 	})
 	return err
 }

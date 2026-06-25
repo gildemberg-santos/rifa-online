@@ -6,7 +6,7 @@ interface Payment {
   id: string
   raffleId: string
   buyerName: string
-  buyerEmail: string
+  buyerPhone: string
   amount: number
   status: string
 }
@@ -15,10 +15,10 @@ export const usePaymentStore = defineStore("payment", () => {
   const payments = ref<Payment[]>([])
   const loading = ref(false)
 
-  async function fetchMyPayments(email: string) {
+  async function fetchMyPayments(phone: string) {
     loading.value = true
     try {
-      payments.value = await api.get<Payment[]>(`/payments/my?email=${encodeURIComponent(email)}`)
+      payments.value = await api.get<Payment[]>(`/payments/my?phone=${encodeURIComponent(phone)}`)
     } finally {
       loading.value = false
     }

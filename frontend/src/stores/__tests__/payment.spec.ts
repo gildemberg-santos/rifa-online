@@ -23,14 +23,14 @@ describe("PaymentStore", () => {
 
   it("fetchMyPayments should update payments", async () => {
     const fakePayments = [
-      { id: "1", raffleId: "r1", buyerName: "John", buyerEmail: "john@test.com", amount: 100, status: "paid" },
+      { id: "1", raffleId: "r1", buyerName: "John", buyerPhone: "11999999999", amount: 100, status: "paid" },
     ]
     mockGet.mockResolvedValue(fakePayments)
 
     const store = usePaymentStore()
-    await store.fetchMyPayments("john@test.com")
+    await store.fetchMyPayments("11999999999")
 
-    expect(mockGet).toHaveBeenCalledWith("/payments/my?email=john%40test.com")
+    expect(mockGet).toHaveBeenCalledWith("/payments/my?phone=11999999999")
     expect(store.payments).toEqual(fakePayments)
     expect(store.loading).toBe(false)
   })

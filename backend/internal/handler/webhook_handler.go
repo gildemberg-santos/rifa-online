@@ -150,7 +150,7 @@ func (h *WebhookHandler) handleRaffleWebhook(w http.ResponseWriter, r *http.Requ
 		h.logger.Error("failed to update payment fields", "error", err)
 	}
 
-	if err := h.ticketRepo.MarkAsPaid(r.Context(), payment.TicketIDs, payment.BuyerName, payment.BuyerEmail, payment.ID.Hex()); err != nil {
+	if err := h.ticketRepo.MarkAsPaid(r.Context(), payment.TicketIDs, payment.BuyerName, payment.BuyerPhone, payment.ID.Hex()); err != nil {
 		h.logger.Error("failed to mark tickets as paid", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return

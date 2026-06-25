@@ -65,7 +65,7 @@ func TestTicketRepo(t *testing.T) {
 			t.Fatalf("expected 2 ticket IDs, got %d", len(ids))
 		}
 
-		if err := repo.MarkAsPaid(ctx, ids, "Buyer", "buyer@example.com", "pay_123"); err != nil {
+		if err := repo.MarkAsPaid(ctx, ids, "Buyer", "11999999999", "pay_123"); err != nil {
 			t.Fatalf("MarkAsPaid: %v", err)
 		}
 
@@ -97,17 +97,17 @@ func TestTicketRepo(t *testing.T) {
 		}
 	})
 
-	t.Run("FindPaidByEmail", func(t *testing.T) {
-		paid, err := repo.FindPaidByEmail(ctx, "buyer@example.com")
+	t.Run("FindPaidByPhone", func(t *testing.T) {
+		paid, err := repo.FindPaidByPhone(ctx, "11999999999")
 		if err != nil {
-			t.Fatalf("FindPaidByEmail: %v", err)
+			t.Fatalf("FindPaidByPhone: %v", err)
 		}
 		if len(paid) < 2 {
 			t.Fatalf("expected at least 2 paid tickets for buyer, got %d", len(paid))
 		}
 		for _, tk := range paid {
-			if tk.BuyerEmail != "buyer@example.com" {
-				t.Fatalf("expected buyerEmail buyer@example.com, got %s", tk.BuyerEmail)
+			if tk.BuyerPhone != "11999999999" {
+				t.Fatalf("expected buyerPhone 11999999999, got %s", tk.BuyerPhone)
 			}
 		}
 	})

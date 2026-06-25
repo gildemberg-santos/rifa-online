@@ -64,6 +64,18 @@ func (r *PaymentRepo) FindByEmail(ctx context.Context, email string) ([]model.Pa
 	return payments, nil
 }
 
+func (r *PaymentRepo) FindByBuyerPhone(ctx context.Context, phone string) ([]model.Payment, error) {
+	cursor, err := r.coll.Find(ctx, bson.M{"buyerPhone": phone})
+	if err != nil {
+		return nil, err
+	}
+	payments := make([]model.Payment, 0)
+	if err := cursor.All(ctx, &payments); err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
 func (r *PaymentRepo) FindByRaffle(ctx context.Context, raffleID primitive.ObjectID) ([]model.Payment, error) {
 	cursor, err := r.coll.Find(ctx, bson.M{"raffleId": raffleID})
 	if err != nil {
