@@ -183,6 +183,7 @@ function subscriptionColor(status: string): string {
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Telefone</label>
             <input
               type="tel"
+              maxlength="15"
               placeholder="(XX) XXXXX-XXXX"
               :value="phone"
               @input="onPhoneInput"

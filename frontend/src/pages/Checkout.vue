@@ -105,6 +105,7 @@ async function submit() {
             type="tel"
             inputmode="numeric"
             required
+            maxlength="15"
             placeholder="(11) 99999-9999"
             class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
           />
