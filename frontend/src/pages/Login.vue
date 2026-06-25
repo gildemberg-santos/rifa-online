@@ -58,7 +58,7 @@ async function submit() {
               v-model="password"
               type="password"
               required
-              maxlength="128"
+              maxlength="72"
               placeholder="••••••••"
               class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
             />

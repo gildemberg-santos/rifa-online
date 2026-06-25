@@ -59,8 +59,8 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*AuthR
 	if len(input.Password) < 6 {
 		return nil, errors.New("password must be at least 6 characters")
 	}
-	if len(input.Password) > 128 {
-		return nil, errors.New("password must be at most 128 characters")
+	if len(input.Password) > 72 {
+		return nil, errors.New("password must be at most 72 characters")
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), 12)
@@ -186,8 +186,8 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID string, input Up
 		if len(input.Password) < 6 {
 			return nil, errors.New("password must be at least 6 characters")
 		}
-		if len(input.Password) > 128 {
-			return nil, errors.New("password must be at most 128 characters")
+		if len(input.Password) > 72 {
+			return nil, errors.New("password must be at most 72 characters")
 		}
 		hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), 12)
 		if err != nil {
