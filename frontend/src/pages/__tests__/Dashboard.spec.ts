@@ -22,6 +22,7 @@ describe("Dashboard", () => {
       email: "test@example.com",
       role: "USER",
       subscriptionStatus: "ACTIVE",
+      subscriptionIsTrial: false,
     }
   })
 

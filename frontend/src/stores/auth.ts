@@ -11,7 +11,7 @@ interface User {
   role: string
   infinitePayHandle?: string
   subscriptionStatus: string
-  subscriptionIsTrial?: boolean
+  subscriptionIsTrial: boolean
   hasSubscriptionBefore?: boolean
 }
 

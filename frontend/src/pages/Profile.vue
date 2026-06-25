@@ -9,6 +9,7 @@ interface User {
   phone?: string
   infinitePayHandle?: string
   subscriptionStatus: string
+  subscriptionIsTrial?: boolean
 }
 
 const user = ref<User | null>(null)
@@ -148,7 +149,7 @@ function subscriptionColor(status: string): string {
             {{ subscriptionLabel(user?.subscriptionStatus || 'INACTIVE') }}
           </span>
           <router-link
-            v-if="user?.subscriptionStatus !== 'ACTIVE'"
+            v-if="user?.subscriptionStatus !== 'ACTIVE' || user?.subscriptionIsTrial"
             to="/subscription"
             class="text-xs text-indigo-600 hover:text-indigo-700 font-medium ml-1"
           >

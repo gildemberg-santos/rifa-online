@@ -47,6 +47,7 @@ type userResponse struct {
 	Phone              string                  `json:"phone,omitempty"`
 	InfinitePayHandle  string                  `json:"infinitePayHandle,omitempty"`
 	SubscriptionStatus model.SubscriptionStatus `json:"subscriptionStatus"`
+	SubscriptionIsTrial bool                   `json:"subscriptionIsTrial"`
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -140,10 +141,11 @@ func toUserResponse(user *model.User) *userResponse {
 		ID:                 user.ID.Hex(),
 		Name:               user.Name,
 		Email:              user.Email,
-		Role:               role,
-		Phone:              user.Phone,
-		InfinitePayHandle:  user.InfinitePayHandle,
-		SubscriptionStatus: status,
+		Role:                role,
+		Phone:               user.Phone,
+		InfinitePayHandle:   user.InfinitePayHandle,
+		SubscriptionStatus:  status,
+		SubscriptionIsTrial: user.SubscriptionIsTrial,
 	}
 }
 

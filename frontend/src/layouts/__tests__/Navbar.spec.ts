@@ -32,6 +32,7 @@ describe("Navbar", () => {
       email: "test@test.com",
       role: "USER",
       subscriptionStatus: "ACTIVE",
+      subscriptionIsTrial: false,
     }
 
     const wrapper = mount(Navbar, {
@@ -51,6 +52,7 @@ describe("Navbar", () => {
       email: "admin@test.com",
       role: "ADMIN",
       subscriptionStatus: "ACTIVE",
+      subscriptionIsTrial: false,
     }
 
     const wrapper = mount(Navbar, {
@@ -68,6 +70,7 @@ describe("Navbar", () => {
       email: "test@test.com",
       role: "USER",
       subscriptionStatus: "ACTIVE",
+      subscriptionIsTrial: false,
     }
 
     const wrapper = mount(Navbar, {
