@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue"
+import { ref, computed } from "vue"
 import { useRoute } from "vue-router"
 import { api } from "../utils/api"
-import { useAuthStore } from "../stores/auth"
 
 const route = useRoute()
-const auth = useAuthStore()
 
 const raffleId = route.params.id as string
 const numbers = computed(() =>
@@ -15,12 +13,6 @@ const numbers = computed(() =>
 const buyerName = ref("")
 const buyerPhone = ref("")
 const loading = ref(false)
-
-onMounted(() => {
-  if (auth.user?.phone) {
-    buyerPhone.value = auth.user.phone
-  }
-})
 const error = ref("")
 
 function formatPhone(value: string): string {
