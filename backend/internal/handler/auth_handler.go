@@ -163,11 +163,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 func toAuthResponse(result *service.AuthResult) *authResponse {
 	return &authResponse{
-		User: &userResponse{
-			ID:    result.User.ID.Hex(),
-			Name:  result.User.Name,
-			Email: result.User.Email,
-		},
+		User:         toUserResponse(result.User),
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
 	}
