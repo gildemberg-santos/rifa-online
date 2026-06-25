@@ -66,6 +66,13 @@ type CheckoutResult struct {
 }
 
 func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput) (*CheckoutResult, error) {
+	if input.BuyerName == "" || len(input.BuyerName) > 150 {
+		return nil, errors.New("buyer name must be between 1 and 150 characters")
+	}
+	if len(input.BuyerPhone) != 10 && len(input.BuyerPhone) != 11 {
+		return nil, errors.New("buyer phone must have 10 or 11 digits")
+	}
+
 	raffleID, err := primitive.ObjectIDFromHex(input.RaffleID)
 	if err != nil {
 		return nil, errors.New("invalid raffle id")

@@ -50,6 +50,18 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*AuthR
 	if input.Name == "" || input.Email == "" || input.Password == "" {
 		return nil, errors.New("name, email, and password are required")
 	}
+	if len(input.Name) < 2 || len(input.Name) > 100 {
+		return nil, errors.New("name must be between 2 and 100 characters")
+	}
+	if len(input.Email) > 255 {
+		return nil, errors.New("email must be at most 255 characters")
+	}
+	if len(input.Password) < 6 {
+		return nil, errors.New("password must be at least 6 characters")
+	}
+	if len(input.Password) > 128 {
+		return nil, errors.New("password must be at most 128 characters")
+	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), 12)
 	if err != nil {
@@ -148,9 +160,15 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID string, input Up
 	updates := bson.M{}
 
 	if input.Name != "" {
+		if len(input.Name) < 2 || len(input.Name) > 100 {
+			return nil, errors.New("name must be between 2 and 100 characters")
+		}
 		updates["name"] = strings.TrimSpace(input.Name)
 	}
 	if input.Email != "" {
+		if len(input.Email) > 255 {
+			return nil, errors.New("email must be at most 255 characters")
+		}
 		email := strings.TrimSpace(strings.ToLower(input.Email))
 		existing, err := s.userRepo.FindByEmail(ctx, email)
 		if err == nil && existing.ID != oid {
@@ -159,9 +177,18 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID string, input Up
 		updates["email"] = email
 	}
 	if input.Phone != "" {
+		if len(input.Phone) < 10 || len(input.Phone) > 11 {
+			return nil, errors.New("phone must have 10 or 11 digits")
+		}
 		updates["phone"] = input.Phone
 	}
 	if input.Password != "" {
+		if len(input.Password) < 6 {
+			return nil, errors.New("password must be at least 6 characters")
+		}
+		if len(input.Password) > 128 {
+			return nil, errors.New("password must be at most 128 characters")
+		}
 		hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), 12)
 		if err != nil {
 			return nil, err

@@ -67,6 +67,22 @@ func (s *RaffleService) Create(ctx context.Context, input CreateRaffleInput) (*m
 		return nil, ErrSubscriptionNotActive
 	}
 
+	if input.Title == "" || len(input.Title) > 100 {
+		return nil, errors.New("title must be between 1 and 100 characters")
+	}
+	if len(input.Description) > 500 {
+		return nil, errors.New("description must be at most 500 characters")
+	}
+	if input.TicketPrice <= 0 {
+		return nil, errors.New("ticket price must be positive")
+	}
+	if input.MaxNumbers < 1 || input.MaxNumbers > 1000 {
+		return nil, errors.New("number of tickets must be between 1 and 1000")
+	}
+	if input.DrawDate.Before(time.Now()) {
+		return nil, errors.New("draw date must be in the future")
+	}
+
 	raffle := &model.Raffle{
 		OrganizerID: oid,
 		Title:       input.Title,
@@ -152,6 +168,19 @@ func (s *RaffleService) Update(ctx context.Context, raffleID primitive.ObjectID,
 	}
 	if raffle.Status != model.RaffleStatusActive {
 		return nil, errors.New("can only edit active raffles")
+	}
+
+	if input.Title == "" || len(input.Title) > 100 {
+		return nil, errors.New("title must be between 1 and 100 characters")
+	}
+	if len(input.Description) > 500 {
+		return nil, errors.New("description must be at most 500 characters")
+	}
+	if input.TicketPrice <= 0 {
+		return nil, errors.New("ticket price must be positive")
+	}
+	if input.DrawDate.Before(time.Now()) {
+		return nil, errors.New("draw date must be in the future")
 	}
 
 	raffle.Title = input.Title

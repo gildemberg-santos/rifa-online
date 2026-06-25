@@ -253,6 +253,10 @@ func (s *SubscriptionService) CreateDevSubscriptionCheckout(ctx context.Context,
 }
 
 func (s *SubscriptionService) UpdateInfinitePayHandle(ctx context.Context, userID string, handle string) (*model.User, error) {
+	if len(handle) > 100 {
+		return nil, errors.New("infinite pay handle must be at most 100 characters")
+	}
+
 	oid, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return nil, ErrUserNotFound
