@@ -89,7 +89,7 @@ const router = createRouter({
       path: "/admin",
       name: "admin",
       component: () => import("../pages/Admin.vue"),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
   ],
 })
@@ -98,9 +98,26 @@ router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("accessToken")
   if (to.meta.requiresAuth && !token) {
     next({ name: "login" })
-  } else {
-    next()
+    return
   }
+  if (to.meta.requiresAdmin) {
+    const userStr = localStorage.getItem("user")
+    if (!userStr) {
+      next({ name: "home" })
+      return
+    }
+    try {
+      const user = JSON.parse(userStr)
+      if (user.role !== "ADMIN") {
+        next({ name: "home" })
+        return
+      }
+    } catch {
+      next({ name: "home" })
+      return
+    }
+  }
+  next()
 })
 
 export default router
