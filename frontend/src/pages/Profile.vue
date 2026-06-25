@@ -17,6 +17,24 @@ const email = ref("")
 const phone = ref("")
 const password = ref("")
 const infinitePayHandle = ref("")
+
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11)
+  if (digits.length <= 2) return `(${digits}`
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
+function onPhoneInput(e: Event) {
+  const input = e.target as HTMLInputElement
+  const cursor = input.selectionStart ?? 0
+  const prevLen = phone.value.length
+  phone.value = formatPhone(input.value)
+  const newLen = phone.value.length
+  if (input.setSelectionRange) {
+    input.setSelectionRange(cursor + (newLen - prevLen), cursor + (newLen - prevLen))
+  }
+}
 const loading = ref(false)
 const fetching = ref(true)
 const message = ref("")
@@ -29,7 +47,7 @@ onMounted(async () => {
     user.value = await api.get<User>("/me")
     name.value = user.value.name
     email.value = user.value.email
-    phone.value = user.value.phone || ""
+    phone.value = user.value.phone ? formatPhone(user.value.phone) : ""
     infinitePayHandle.value = user.value.infinitePayHandle || ""
   } catch {
     message.value = "Erro ao carregar perfil"
@@ -47,7 +65,7 @@ async function submit() {
   const body: Record<string, string> = {}
   if (name.value !== user.value?.name) body.name = name.value
   if (email.value !== user.value?.email) body.email = email.value
-  if (phone.value !== (user.value?.phone || "")) body.phone = phone.value
+  if (phone.value !== (user.value?.phone || "")) body.phone = phone.value.replace(/\D/g, "")
   if (password.value) body.password = password.value
 
   if (Object.keys(body).length === 0) {
@@ -162,9 +180,10 @@ function subscriptionColor(status: string): string {
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Telefone</label>
             <input
-              v-model="phone"
               type="tel"
               placeholder="(XX) XXXXX-XXXX"
+              :value="phone"
+              @input="onPhoneInput"
               class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
             />
           </div>
