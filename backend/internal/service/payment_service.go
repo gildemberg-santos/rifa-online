@@ -91,7 +91,7 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		lockKey := fmt.Sprintf("raffle:%s:reserve:%d", input.RaffleID, num)
 		lockKeys[i] = lockKey
 
-		ok, err := s.redisClient.SetNX(ctx, lockKey, input.BuyerEmail, 15*time.Minute).Result()
+		ok, err := s.redisClient.SetNX(ctx, lockKey, input.BuyerEmail, 5*time.Minute).Result()
 		if err != nil {
 			return nil, fmt.Errorf("redis error: %w", err)
 		}

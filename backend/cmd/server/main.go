@@ -76,7 +76,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	reservationTTL := 30 * time.Minute
+	reservationTTL := 10 * time.Minute
 	cleanupInterval := 5 * time.Minute
 	go cleanupExpiredReservations(logger, ticketRepo, paymentRepo, reservationTTL, cleanupInterval)
 
