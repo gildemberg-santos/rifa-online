@@ -23,12 +23,21 @@ const (
 	PaymentMethodBoleto PaymentMethod = "BOLETO"
 )
 
+type PaymentType string
+
+const (
+	PaymentTypeRaffle       PaymentType = "RAFFLE"
+	PaymentTypeSubscription PaymentType = "SUBSCRIPTION"
+)
+
 type Payment struct {
 	ID             primitive.ObjectID   `bson:"_id" json:"id"`
-	RaffleID       primitive.ObjectID   `bson:"raffleId" json:"raffleId"`
-	TicketIDs      []primitive.ObjectID `bson:"ticketIds" json:"ticketIds"`
-	BuyerName      string               `bson:"buyerName" json:"buyerName"`
-	BuyerEmail     string               `bson:"buyerEmail" json:"buyerEmail"`
+	Type           PaymentType          `bson:"type" json:"type"`
+	RaffleID       primitive.ObjectID   `bson:"raffleId,omitempty" json:"raffleId,omitempty"`
+	UserID         primitive.ObjectID   `bson:"userId,omitempty" json:"userId,omitempty"`
+	TicketIDs      []primitive.ObjectID `bson:"ticketIds,omitempty" json:"ticketIds,omitempty"`
+	BuyerName      string               `bson:"buyerName,omitempty" json:"buyerName,omitempty"`
+	BuyerEmail     string               `bson:"buyerEmail,omitempty" json:"buyerEmail,omitempty"`
 	BuyerPhone     string               `bson:"buyerPhone,omitempty" json:"buyerPhone,omitempty"`
 	CheckoutURL    string               `bson:"checkoutUrl,omitempty" json:"checkoutUrl,omitempty"`
 	InvoiceSlug    string               `bson:"invoiceSlug,omitempty" json:"invoiceSlug,omitempty"`
@@ -39,3 +48,5 @@ type Payment struct {
 	PaidAt         *time.Time           `bson:"paidAt,omitempty" json:"paidAt,omitempty"`
 	CreatedAt      time.Time            `bson:"createdAt" json:"createdAt"`
 }
+
+const SubscriptionPrice = 1000 // R$10,00 in cents

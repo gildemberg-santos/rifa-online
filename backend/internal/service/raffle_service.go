@@ -23,13 +23,15 @@ type RaffleService struct {
 	raffleRepo  *repository.RaffleRepo
 	ticketRepo  *repository.TicketRepo
 	paymentRepo *repository.PaymentRepo
+	userRepo    *repository.UserRepo
 }
 
-func NewRaffleService(raffleRepo *repository.RaffleRepo, ticketRepo *repository.TicketRepo, paymentRepo *repository.PaymentRepo) *RaffleService {
+func NewRaffleService(raffleRepo *repository.RaffleRepo, ticketRepo *repository.TicketRepo, paymentRepo *repository.PaymentRepo, userRepo *repository.UserRepo) *RaffleService {
 	return &RaffleService{
 		raffleRepo:  raffleRepo,
 		ticketRepo:  ticketRepo,
 		paymentRepo: paymentRepo,
+		userRepo:    userRepo,
 	}
 }
 
@@ -47,6 +49,22 @@ func (s *RaffleService) Create(ctx context.Context, input CreateRaffleInput) (*m
 	oid, err := primitive.ObjectIDFromHex(input.OrganizerID)
 	if err != nil {
 		return nil, errors.New("invalid organizer id")
+	}
+
+	user, err := s.userRepo.FindByID(ctx, oid)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	if user.SubscriptionStatus != model.SubscriptionStatusActive {
+		return nil, ErrSubscriptionNotActive
+	}
+
+	if user.SubscriptionExpiresAt != nil && time.Now().After(*user.SubscriptionExpiresAt) {
+		s.userRepo.UpdateFields(ctx, oid, primitive.M{
+			"subscriptionStatus": model.SubscriptionStatusPastDue,
+		})
+		return nil, ErrSubscriptionNotActive
 	}
 
 	raffle := &model.Raffle{

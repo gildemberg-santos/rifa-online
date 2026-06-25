@@ -7,6 +7,11 @@ interface User {
   id: string
   name: string
   email: string
+  role: string
+  infinitePayHandle?: string
+  subscriptionStatus: string
+  subscriptionIsTrial?: boolean
+  hasSubscriptionBefore?: boolean
 }
 
 interface AuthResponse {

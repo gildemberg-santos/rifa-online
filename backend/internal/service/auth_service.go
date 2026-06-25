@@ -60,6 +60,7 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*AuthR
 		Name:         input.Name,
 		Email:        input.Email,
 		PasswordHash: string(hash),
+		Role:         model.RoleUser,
 	}
 
 	if err := s.userRepo.Insert(ctx, user); err != nil {

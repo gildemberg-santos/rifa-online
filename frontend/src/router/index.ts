@@ -66,6 +66,24 @@ const router = createRouter({
       component: () => import("../pages/Profile.vue"),
       meta: { requiresAuth: true },
     },
+    {
+      path: "/subscription",
+      name: "subscription",
+      component: () => import("../pages/Subscription.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/my-purchases",
+      name: "my-purchases",
+      component: () => import("../pages/MyPurchases.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/admin",
+      name: "admin",
+      component: () => import("../pages/Admin.vue"),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

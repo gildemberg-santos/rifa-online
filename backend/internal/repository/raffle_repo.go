@@ -113,3 +113,31 @@ func (r *RaffleRepo) UpdateWinner(ctx context.Context, id primitive.ObjectID, wi
 	})
 	return err
 }
+
+func (r *RaffleRepo) FindAll(ctx context.Context) ([]model.Raffle, error) {
+	cursor, err := r.coll.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	var raffles []model.Raffle
+	if err := cursor.All(ctx, &raffles); err != nil {
+		return nil, err
+	}
+	return raffles, nil
+}
+
+func (r *RaffleRepo) CountAll(ctx context.Context) (int, error) {
+	count, err := r.coll.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (r *RaffleRepo) CountByStatus(ctx context.Context, status string) (int, error) {
+	count, err := r.coll.CountDocuments(ctx, bson.M{"status": status})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}

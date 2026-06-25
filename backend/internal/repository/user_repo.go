@@ -70,3 +70,42 @@ func (r *UserRepo) Delete(ctx context.Context, id primitive.ObjectID) error {
 	_, err := r.coll.DeleteOne(ctx, bson.M{"_id": id})
 	return err
 }
+
+func (r *UserRepo) FindAll(ctx context.Context) ([]model.User, error) {
+	cursor, err := r.coll.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	var users []model.User
+	if err := cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (r *UserRepo) CountAll(ctx context.Context) (int, error) {
+	count, err := r.coll.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (r *UserRepo) CountBySubscription(ctx context.Context, status string) (int, error) {
+	count, err := r.coll.CountDocuments(ctx, bson.M{"subscriptionStatus": status})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (r *UserRepo) CountByTrial(ctx context.Context) (int, error) {
+	count, err := r.coll.CountDocuments(ctx, bson.M{
+		"subscriptionStatus":  model.SubscriptionStatusActive,
+		"subscriptionIsTrial": true,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}

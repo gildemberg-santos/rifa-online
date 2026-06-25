@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
+	"github.com/user/rifa-online/internal/middleware"
 	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/repository"
 	"github.com/user/rifa-online/internal/service"
@@ -18,13 +19,15 @@ type PaymentHandler struct {
 	paymentService *service.PaymentService
 	paymentRepo    *repository.PaymentRepo
 	ticketRepo     *repository.TicketRepo
+	userRepo       *repository.UserRepo
 }
 
-func NewPaymentHandler(paymentService *service.PaymentService, paymentRepo *repository.PaymentRepo, ticketRepo *repository.TicketRepo) *PaymentHandler {
+func NewPaymentHandler(paymentService *service.PaymentService, paymentRepo *repository.PaymentRepo, ticketRepo *repository.TicketRepo, userRepo *repository.UserRepo) *PaymentHandler {
 	return &PaymentHandler{
 		paymentService: paymentService,
 		paymentRepo:    paymentRepo,
 		ticketRepo:     ticketRepo,
+		userRepo:       userRepo,
 	}
 }
 
@@ -156,4 +159,28 @@ func (h *PaymentHandler) MyTickets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, tickets)
+}
+
+func (h *PaymentHandler) MyPurchases(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+
+	oid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		writeError(w, "invalid user", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.userRepo.FindByID(r.Context(), oid)
+	if err != nil {
+		writeError(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	items, err := h.paymentService.GetMyPurchases(r.Context(), oid, user.Email)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, items)
 }

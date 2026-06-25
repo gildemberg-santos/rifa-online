@@ -130,6 +130,18 @@ func (r *TicketRepo) MarkAsReserved(ctx context.Context, ids []primitive.ObjectI
 	return err
 }
 
+func (r *TicketRepo) FindByIDs(ctx context.Context, ids []primitive.ObjectID) ([]model.Ticket, error) {
+	cursor, err := r.coll.Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	if err != nil {
+		return nil, err
+	}
+	tickets := make([]model.Ticket, 0)
+	if err := cursor.All(ctx, &tickets); err != nil {
+		return nil, err
+	}
+	return tickets, nil
+}
+
 func (r *TicketRepo) FindPaidByRaffle(ctx context.Context, raffleID primitive.ObjectID) ([]model.Ticket, error) {
 	return r.FindByRaffleAndStatus(ctx, raffleID, model.TicketStatusPaid)
 }
@@ -186,4 +198,8 @@ func (r *TicketRepo) UpdateManyStatus(ctx context.Context, ids []primitive.Objec
 		"$set": bson.M{"status": status},
 	})
 	return err
+}
+
+func (r *TicketRepo) CountAllPaid(ctx context.Context) (int64, error) {
+	return r.coll.CountDocuments(ctx, bson.M{"status": model.TicketStatusPaid})
 }

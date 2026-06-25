@@ -32,6 +32,15 @@ const mobileOpen = ref(false)
             <router-link to="/profile" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
               Perfil
             </router-link>
+            <router-link to="/subscription" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+              Assinatura
+            </router-link>
+            <router-link to="/my-purchases" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+              Minhas Compras
+            </router-link>
+            <router-link v-if="auth.user?.role === 'ADMIN'" to="/admin" class="px-3 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+              Admin
+            </router-link>
             <div class="w-px h-6 bg-gray-200 mx-2"></div>
             <button @click="auth.logout" class="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
               Sair
@@ -52,6 +61,15 @@ const mobileOpen = ref(false)
           </router-link>
           <router-link to="/profile" class="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" @click="mobileOpen = false">
             Perfil
+          </router-link>
+          <router-link to="/subscription" class="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" @click="mobileOpen = false">
+            Assinatura
+          </router-link>
+          <router-link to="/my-purchases" class="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" @click="mobileOpen = false">
+            Minhas Compras
+          </router-link>
+          <router-link v-if="auth.user?.role === 'ADMIN'" to="/admin" class="block px-3 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg" @click="mobileOpen = false">
+            Admin
           </router-link>
           <button @click="auth.logout" class="block w-full text-left px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg">
             Sair

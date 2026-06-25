@@ -40,9 +40,12 @@ type authResponse struct {
 }
 
 type userResponse struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID                 string                  `json:"id"`
+	Name               string                  `json:"name"`
+	Email              string                  `json:"email"`
+	Role               model.Role              `json:"role"`
+	InfinitePayHandle  string                  `json:"infinitePayHandle,omitempty"`
+	SubscriptionStatus model.SubscriptionStatus `json:"subscriptionStatus"`
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -124,10 +127,21 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func toUserResponse(user *model.User) *userResponse {
+	status := user.SubscriptionStatus
+	if status == "" {
+		status = model.SubscriptionStatusInactive
+	}
+	role := user.Role
+	if role == "" {
+		role = model.RoleUser
+	}
 	return &userResponse{
-		ID:    user.ID.Hex(),
-		Name:  user.Name,
-		Email: user.Email,
+		ID:                 user.ID.Hex(),
+		Name:               user.Name,
+		Email:              user.Email,
+		Role:               role,
+		InfinitePayHandle:  user.InfinitePayHandle,
+		SubscriptionStatus: status,
 	}
 }
 

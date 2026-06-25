@@ -20,7 +20,7 @@
         </div>
         <div>
           <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Contato</h4>
-          <p class="text-sm">admin@email.com</p>
+          <p class="text-sm">gildemberg.santos@gmail.com</p>
         </div>
       </div>
       <div class="border-t border-gray-800 mt-8 pt-8 text-center text-sm">

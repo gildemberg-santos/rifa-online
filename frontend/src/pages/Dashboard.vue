@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { api } from "../utils/api"
+import { useAuthStore } from "../stores/auth"
+
+const auth = useAuthStore()
 
 interface Raffle {
   id: string
@@ -23,18 +26,29 @@ interface DashboardStats {
   totalAvailableTickets: number
 }
 
+const subStatus = ref("")
+const isTrial = ref(false)
+
 const raffles = ref<Raffle[]>([])
 const stats = ref<DashboardStats | null>(null)
 const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const [r, s] = await Promise.all([
+    const [r, s, sub] = await Promise.all([
       api.get<Raffle[]>("/raffles/my"),
       api.get<DashboardStats>("/dashboard/stats"),
+      api.get<{ subscriptionStatus: string; subscriptionIsTrial?: boolean }>("/subscription/status").catch(() => null),
     ])
     raffles.value = r
     stats.value = s
+    if (sub) {
+      subStatus.value = sub.subscriptionStatus
+      isTrial.value = sub.subscriptionIsTrial ?? false
+      if (auth.user) auth.user.subscriptionIsTrial = isTrial.value
+    } else {
+      subStatus.value = auth.user?.subscriptionStatus || ""
+    }
   } catch (e) {
     console.error("Failed to load dashboard data", e)
   } finally {
@@ -88,6 +102,63 @@ function statusLabel(status: string) {
 
 <template>
   <div class="max-w-6xl mx-auto px-4 py-8 animate-fade-in">
+    <div v-if="subStatus === 'INACTIVE'" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-blue-700">Comece agora — teste grátis por 7 dias</p>
+          <p class="text-xs text-blue-600 mt-0.5">Ative seu teste gratuito e crie rifas sem compromisso.</p>
+        </div>
+        <router-link
+          to="/subscription"
+          class="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+        >
+          Ativar teste
+        </router-link>
+      </div>
+    </div>
+
+    <div v-if="subStatus === 'PAST_DUE'" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-red-700">Assinatura vencida</p>
+          <p class="text-xs text-red-600 mt-0.5">Renove por R$ 10,00/mês para continuar criando rifas.</p>
+        </div>
+        <router-link
+          to="/subscription"
+          class="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+        >
+          Renovar
+        </router-link>
+      </div>
+    </div>
+
+    <div v-if="subStatus === 'CANCELLED'" class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-700">Assinatura cancelada</p>
+          <p class="text-xs text-gray-600 mt-0.5">Assine novamente por R$ 10,00/mês para reativar.</p>
+        </div>
+        <router-link
+          to="/subscription"
+          class="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          Assinar
+        </router-link>
+      </div>
+    </div>
+
+    <div v-if="isTrial" class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <p class="text-sm font-semibold text-amber-800">Você está no período de teste do sistema</p>
+          <p class="text-xs text-amber-700 mt-0.5">Aproveite para testar todas as funcionalidades. Após o período, assine por R$ 10,00/mês.</p>
+        </div>
+      </div>
+    </div>
+
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>

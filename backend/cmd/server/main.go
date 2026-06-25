@@ -103,12 +103,15 @@ func main() {
 	webhookURL := cfg.FrontendURL + "/api/v1/webhooks/infinitepay"
 	infiniteClient := infinitepay.NewClient(cfg.InfinitePayHandle, webhookURL, cfg.FrontendURL)
 
-	raffleService := service.NewRaffleService(raffleRepo, ticketRepo, paymentRepo)
-	paymentService := service.NewPaymentService(raffleRepo, ticketRepo, paymentRepo, infiniteClient, redisClient, cfg)
+	raffleService := service.NewRaffleService(raffleRepo, ticketRepo, paymentRepo, userRepo)
+	paymentService := service.NewPaymentService(raffleRepo, ticketRepo, paymentRepo, userRepo, infiniteClient, redisClient, cfg)
+	subscriptionService := service.NewSubscriptionService(userRepo, paymentRepo, infiniteClient, cfg)
 
 	raffleHandler := handler.NewRaffleHandler(raffleService)
-	paymentHandler := handler.NewPaymentHandler(paymentService, paymentRepo, ticketRepo)
-	webhookHandler := handler.NewWebhookHandler(paymentRepo, ticketRepo, webhookRepo, cfg, logger)
+	paymentHandler := handler.NewPaymentHandler(paymentService, paymentRepo, ticketRepo, userRepo)
+	webhookHandler := handler.NewWebhookHandler(paymentRepo, ticketRepo, webhookRepo, userRepo, subscriptionService, cfg, logger)
+	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)
+	adminHandler := handler.NewAdminHandler(userRepo, raffleRepo, ticketRepo, paymentRepo)
 
 	authMw := middleware.Auth(cfg)
 
@@ -177,6 +180,22 @@ func main() {
 			r.Use(authMw)
 			r.Get("/", authHandler.GetProfile)
 			r.Put("/", authHandler.UpdateProfile)
+			r.Put("/infinite-pay-handle", subscriptionHandler.UpdateInfinitePayHandle)
+			r.Get("/purchases", paymentHandler.MyPurchases)
+		})
+
+		r.Route("/subscription", func(r chi.Router) {
+			r.Use(authMw)
+			r.Post("/checkout", subscriptionHandler.Checkout)
+			r.Get("/status", subscriptionHandler.Status)
+		})
+
+		r.Route("/admin", func(r chi.Router) {
+			r.Use(authMw)
+			r.Use(middleware.Admin(userRepo))
+			r.Get("/users", adminHandler.Users)
+			r.Get("/raffles", adminHandler.Raffles)
+			r.Get("/stats", adminHandler.Stats)
 		})
 	})
 
@@ -260,10 +279,16 @@ func seedDefaultUser(userRepo *repository.UserRepo) {
 		return
 	}
 
+	now := time.Now()
+	expiresAt := now.AddDate(1, 0, 0)
 	user := &model.User{
-		Name:         "Administrador",
-		Email:        email,
-		PasswordHash: string(hash),
+		Name:                 "Administrador",
+		Email:                email,
+		PasswordHash:         string(hash),
+		Role:                 model.RoleAdmin,
+		SubscriptionStatus:   model.SubscriptionStatusActive,
+		SubscriptionExpiresAt: &expiresAt,
+		HasSubscriptionBefore: true,
 	}
 
 	if err := userRepo.Insert(ctx, user); err != nil {

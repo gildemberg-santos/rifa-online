@@ -16,14 +16,17 @@ import (
 )
 
 var (
-	ErrNumbersUnavailable = errors.New("one or more numbers are unavailable")
-	ErrRaffleNotActive    = errors.New("raffle is not active")
+	ErrNumbersUnavailable   = errors.New("one or more numbers are unavailable")
+	ErrRaffleNotActive      = errors.New("raffle is not active")
+	ErrOrganizerNotFound    = errors.New("organizer not found")
+	ErrInvalidPaymentType   = errors.New("invalid payment type")
 )
 
 type PaymentService struct {
 	raffleRepo      *repository.RaffleRepo
 	ticketRepo      *repository.TicketRepo
 	paymentRepo     *repository.PaymentRepo
+	userRepo        *repository.UserRepo
 	infiniteClient  *infinitepay.Client
 	redisClient     *redis.Client
 	cfg             *config.Config
@@ -33,6 +36,7 @@ func NewPaymentService(
 	raffleRepo *repository.RaffleRepo,
 	ticketRepo *repository.TicketRepo,
 	paymentRepo *repository.PaymentRepo,
+	userRepo *repository.UserRepo,
 	infiniteClient *infinitepay.Client,
 	redisClient *redis.Client,
 	cfg *config.Config,
@@ -41,6 +45,7 @@ func NewPaymentService(
 		raffleRepo:      raffleRepo,
 		ticketRepo:      ticketRepo,
 		paymentRepo:     paymentRepo,
+		userRepo:        userRepo,
 		infiniteClient:  infiniteClient,
 		redisClient:     redisClient,
 		cfg:             cfg,
@@ -117,7 +122,18 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		buyerEmail = input.BuyerPhone + "@c.rifa"
 	}
 
+	organizer, err := s.userRepo.FindByID(ctx, raffle.OrganizerID)
+	if err != nil {
+		return nil, ErrOrganizerNotFound
+	}
+
+	infinitePayHandle := organizer.InfinitePayHandle
+	if infinitePayHandle == "" {
+		infinitePayHandle = s.cfg.InfinitePayHandle
+	}
+
 	payment := &model.Payment{
+		Type:       model.PaymentTypeRaffle,
 		RaffleID:   raffleID,
 		TicketIDs:  ticketIDs,
 		BuyerName:  input.BuyerName,
@@ -131,7 +147,10 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		return nil, err
 	}
 
+	webhookURL := s.cfg.FrontendURL + "/api/v1/webhooks/infinitepay"
+
 	checkout, err := s.infiniteClient.CreateCheckout(infinitepay.CreateCheckoutRequest{
+		Handle: infinitePayHandle,
 		Items: []infinitepay.CheckoutItem{
 			{
 				Quantity:    len(input.Numbers),
@@ -140,6 +159,7 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 			},
 		},
 		OrderNSU:   payment.ID.Hex(),
+		WebhookURL: webhookURL,
 		Customer: &infinitepay.Customer{
 			Name:        input.BuyerName,
 			Email:       buyerEmail,
@@ -159,6 +179,76 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		CheckoutURL: checkout.URL,
 		PaymentID:   payment.ID.Hex(),
 	}, nil
+}
+
+type MyPurchaseItem struct {
+	ID            string    `json:"id"`
+	Type          string    `json:"type"`
+	Amount        int       `json:"amount"`
+	Status        string    `json:"status"`
+	BuyerName     string    `json:"buyerName"`
+	CreatedAt     time.Time `json:"createdAt"`
+	PaidAt        *time.Time `json:"paidAt,omitempty"`
+	RaffleID      string    `json:"raffleId,omitempty"`
+	RaffleTitle   string    `json:"raffleTitle,omitempty"`
+	RaffleStatus  string    `json:"raffleStatus,omitempty"`
+	TicketNumbers []int     `json:"ticketNumbers,omitempty"`
+}
+
+func (s *PaymentService) GetMyPurchases(ctx context.Context, userID primitive.ObjectID, email string) ([]MyPurchaseItem, error) {
+	paymentsByEmail, _ := s.paymentRepo.FindByEmail(ctx, email)
+	paymentsByUser, _ := s.paymentRepo.FindByUserID(ctx, userID)
+
+	seen := make(map[string]bool)
+	merged := make([]model.Payment, 0)
+
+	for i := range paymentsByEmail {
+		id := paymentsByEmail[i].ID.Hex()
+		if !seen[id] {
+			seen[id] = true
+			merged = append(merged, paymentsByEmail[i])
+		}
+	}
+	for i := range paymentsByUser {
+		id := paymentsByUser[i].ID.Hex()
+		if !seen[id] {
+			seen[id] = true
+			merged = append(merged, paymentsByUser[i])
+		}
+	}
+
+	result := make([]MyPurchaseItem, 0, len(merged))
+	for _, p := range merged {
+		item := MyPurchaseItem{
+			ID:        p.ID.Hex(),
+			Type:      string(p.Type),
+			Amount:    p.Amount,
+			Status:    string(p.Status),
+			BuyerName: p.BuyerName,
+			CreatedAt: p.CreatedAt,
+			PaidAt:    p.PaidAt,
+		}
+
+		if p.Type == model.PaymentTypeRaffle && p.RaffleID != primitive.NilObjectID {
+			item.RaffleID = p.RaffleID.Hex()
+			if raffle, err := s.raffleRepo.FindByID(ctx, p.RaffleID); err == nil {
+				item.RaffleTitle = raffle.Title
+				item.RaffleStatus = string(raffle.Status)
+			}
+			if len(p.TicketIDs) > 0 {
+				tickets, err := s.ticketRepo.FindByIDs(ctx, p.TicketIDs)
+				if err == nil {
+					for _, t := range tickets {
+						item.TicketNumbers = append(item.TicketNumbers, t.Number)
+					}
+				}
+			}
+		}
+
+		result = append(result, item)
+	}
+
+	return result, nil
 }
 
 func (s *PaymentService) GetMyPayments(ctx context.Context, email string) ([]model.Payment, error) {
