@@ -38,7 +38,9 @@
       <div class="border-t border-gray-800 mt-8 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-3 text-sm text-gray-500">
           <span>Pagamento processado por</span>
-          <img src="../assets/infinitepay-logo.svg" alt="InfinitePay" class="h-6 brightness-0 invert opacity-60 hover:opacity-100 transition-opacity" />
+          <span class="inline-flex items-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 shadow-sm">
+            <img src="../assets/infinitepay-logo.svg" alt="InfinitePay" class="h-5" />
+          </span>
         </div>
         <p class="text-sm text-gray-500">&copy; {{ new Date().getFullYear() }} Rifa Online. Todos os direitos reservados.</p>
       </div>
