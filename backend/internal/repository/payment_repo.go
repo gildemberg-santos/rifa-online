@@ -211,6 +211,25 @@ func (r *PaymentRepo) SumPaidByRaffle(ctx context.Context, raffleID primitive.Ob
 	return results[0].Total, nil
 }
 
+func (r *PaymentRepo) SumPaidByType(ctx context.Context, paymentType model.PaymentType) (int64, error) {
+	match := bson.M{"$match": bson.M{"type": paymentType, "status": model.PaymentStatusPaid}}
+	group := bson.M{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$amount"}}}
+	cursor, err := r.coll.Aggregate(ctx, []bson.M{match, group})
+	if err != nil {
+		return 0, err
+	}
+	var results []struct {
+		Total int64 `bson:"total"`
+	}
+	if err := cursor.All(ctx, &results); err != nil {
+		return 0, err
+	}
+	if len(results) == 0 {
+		return 0, nil
+	}
+	return results[0].Total, nil
+}
+
 func (r *PaymentRepo) SumAllPaid(ctx context.Context) (int64, error) {
 	match := bson.M{"$match": bson.M{"status": model.PaymentStatusPaid}}
 	group := bson.M{"$group": bson.M{"_id": nil, "total": bson.M{"$sum": "$amount"}}}

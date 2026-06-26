@@ -166,12 +166,12 @@ func (s *RaffleService) GetMyRaffles(ctx context.Context, organizerID primitive.
 	return s.raffleRepo.FindByOrganizer(ctx, organizerID)
 }
 
-func (s *RaffleService) Update(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID, input CreateRaffleInput) (*model.Raffle, error) {
+func (s *RaffleService) Update(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID, input CreateRaffleInput, isAdmin bool) (*model.Raffle, error) {
 	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
 	if err != nil {
 		return nil, ErrRaffleNotFound
 	}
-	if raffle.OrganizerID != organizerID {
+	if raffle.OrganizerID != organizerID && !isAdmin {
 		return nil, ErrNotRaffleOwner
 	}
 	if raffle.Status != model.RaffleStatusActive {
@@ -203,12 +203,12 @@ func (s *RaffleService) Update(ctx context.Context, raffleID primitive.ObjectID,
 	return raffle, nil
 }
 
-func (s *RaffleService) Delete(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID) error {
+func (s *RaffleService) Delete(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID, isAdmin bool) error {
 	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
 	if err != nil {
 		return ErrRaffleNotFound
 	}
-	if raffle.OrganizerID != organizerID {
+	if raffle.OrganizerID != organizerID && !isAdmin {
 		return ErrNotRaffleOwner
 	}
 
@@ -221,12 +221,12 @@ func (s *RaffleService) Delete(ctx context.Context, raffleID primitive.ObjectID,
 	return s.raffleRepo.Delete(ctx, raffleID)
 }
 
-func (s *RaffleService) Cancel(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID) error {
+func (s *RaffleService) Cancel(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID, isAdmin bool) error {
 	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
 	if err != nil {
 		return ErrRaffleNotFound
 	}
-	if raffle.OrganizerID != organizerID {
+	if raffle.OrganizerID != organizerID && !isAdmin {
 		return ErrNotRaffleOwner
 	}
 	if raffle.Status == model.RaffleStatusDrawn {
@@ -244,12 +244,12 @@ type RaffleStats struct {
 	MaxNumbers      int     `json:"maxNumbers"`
 }
 
-func (s *RaffleService) GetStats(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID) (*RaffleStats, error) {
+func (s *RaffleService) GetStats(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID, isAdmin bool) (*RaffleStats, error) {
 	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
 	if err != nil {
 		return nil, ErrRaffleNotFound
 	}
-	if raffle.OrganizerID != organizerID {
+	if raffle.OrganizerID != organizerID && !isAdmin {
 		return nil, ErrNotRaffleOwner
 	}
 
@@ -343,12 +343,12 @@ type DrawResult struct {
 	Raffle       *model.Raffle `json:"raffle"`
 }
 
-func (s *RaffleService) Draw(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID) (*DrawResult, error) {
+func (s *RaffleService) Draw(ctx context.Context, raffleID primitive.ObjectID, organizerID primitive.ObjectID, isAdmin bool) (*DrawResult, error) {
 	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
 	if err != nil {
 		return nil, ErrRaffleNotFound
 	}
-	if raffle.OrganizerID != organizerID {
+	if raffle.OrganizerID != organizerID && !isAdmin {
 		return nil, ErrNotRaffleOwner
 	}
 	if raffle.Status != model.RaffleStatusActive {

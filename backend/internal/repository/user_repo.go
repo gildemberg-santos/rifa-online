@@ -163,3 +163,23 @@ func (r *UserRepo) CountByTrial(ctx context.Context) (int, error) {
 	}
 	return int(count), nil
 }
+
+func (r *UserRepo) FindActiveNonTrialUsers(ctx context.Context) ([]model.User, error) {
+	cursor, err := r.coll.Find(ctx, bson.M{
+		"subscriptionStatus": model.SubscriptionStatusActive,
+		"subscriptionIsTrial": bson.M{"$ne": true},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var users []model.User
+	if err := cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+	for i := range users {
+		if err := r.decrypt(&users[i]); err != nil {
+			return nil, err
+		}
+	}
+	return users, nil
+}

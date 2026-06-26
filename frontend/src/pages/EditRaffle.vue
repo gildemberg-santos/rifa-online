@@ -47,7 +47,7 @@ async function submit() {
       maxNumbers: 0,
       drawDate: new Date(drawDate.value).toISOString(),
     })
-    router.push("/dashboard")
+    router.push((route.query.redirect as string) || "/dashboard")
   } catch (e: any) {
     error.value = e.message || "Erro ao atualizar rifa"
   } finally {
@@ -166,7 +166,7 @@ async function submit() {
 
           <div class="flex gap-3 pt-2">
             <router-link
-              to="/dashboard"
+              :to="(route.query.redirect as string) || '/dashboard'"
               class="flex-1 py-2.5 text-center text-gray-700 font-medium bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
             >
               Cancelar

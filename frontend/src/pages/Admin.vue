@@ -516,7 +516,7 @@ function closeModal() {
                   <td class="px-5 py-3 text-gray-500 text-xs whitespace-nowrap">{{ formatDate(r.createdAt) }}</td>
                   <td class="px-5 py-3">
                     <div class="flex gap-1 flex-wrap" v-if="r.status === 'ACTIVE'">
-                      <router-link :to="`/dashboard/raffles/${r.id}/edit`"
+                      <router-link :to="`/dashboard/raffles/${r.id}/edit?redirect=/admin`"
                         class="px-2.5 py-1 text-xs font-medium rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
                       >Editar</router-link>
                       <button @click="confirmAction = { id: r.id, action: 'draw', label: 'realizar sorteio' }" :disabled="actionLoading === r.id || r.paidTickets === 0"

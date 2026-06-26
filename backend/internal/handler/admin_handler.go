@@ -214,7 +214,11 @@ func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	activeRaffles, _ := h.raffleRepo.CountByStatus(ctx, "ACTIVE")
 
 	totalPaidTickets, _ := h.ticketRepo.CountAllPaid(ctx)
-	totalRevenue, _ := h.paymentRepo.SumAllPaid(ctx)
+
+	raffleRevenue, _ := h.paymentRepo.SumPaidByType(ctx, model.PaymentTypeRaffle)
+
+	activeNonTrialUsers, _ := h.userRepo.FindActiveNonTrialUsers(ctx)
+	subscriptionRevenue := int64(len(activeNonTrialUsers) * model.SubscriptionPrice)
 
 	writeJSON(w, http.StatusOK, adminStats{
 		TotalUsers:       totalUsers,
@@ -222,7 +226,7 @@ func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		TotalRaffles:     totalRaffles,
 		ActiveRaffles:    activeRaffles,
 		TotalPaidTickets: totalPaidTickets,
-		TotalRevenue:     totalRevenue,
+		TotalRevenue:     raffleRevenue + subscriptionRevenue,
 		TrialUsers:       trialUsers,
 		PastDueUsers:     pastDueUsers,
 	})

@@ -13,7 +13,7 @@ import (
 )
 
 func TestRaffleHandler_Create_Unauthorized(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("POST", "/api/v1/raffles", `{}`)
 	resp := httptest.NewRecorder()
@@ -27,7 +27,7 @@ func TestRaffleHandler_Create_Unauthorized(t *testing.T) {
 
 func TestRaffleHandler_Create_InvalidBody(t *testing.T) {
 	raffleSvc := service.NewRaffleService(nil, nil, nil, nil)
-	handler := NewRaffleHandler(raffleSvc)
+	handler := NewRaffleHandler(raffleSvc, nil)
 
 	req := makeRequest("POST", "/api/v1/raffles", `{invalid}`)
 	ctx := context.WithValue(context.Background(), middleware.UserIDKey, "507f1f77bcf86cd799439011")
@@ -43,7 +43,7 @@ func TestRaffleHandler_Create_InvalidBody(t *testing.T) {
 
 func TestRaffleHandler_Create_InvalidDrawDate(t *testing.T) {
 	raffleSvc := service.NewRaffleService(nil, nil, nil, nil)
-	handler := NewRaffleHandler(raffleSvc)
+	handler := NewRaffleHandler(raffleSvc, nil)
 
 	req := makeRequest("POST", "/api/v1/raffles", `{"title":"Test","ticketPrice":10,"maxNumbers":100,"drawDate":"invalid-date"}`)
 	ctx := context.WithValue(context.Background(), middleware.UserIDKey, "507f1f77bcf86cd799439011")
@@ -59,12 +59,12 @@ func TestRaffleHandler_Create_InvalidDrawDate(t *testing.T) {
 
 func TestRaffleHandler_List(t *testing.T) {
 	raffleSvc := service.NewRaffleService(nil, nil, nil, nil)
-	handler := NewRaffleHandler(raffleSvc)
+	handler := NewRaffleHandler(raffleSvc, nil)
 	_ = handler
 }
 
 func TestRaffleHandler_GetDetail_InvalidHex(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("GET", "/api/v1/raffles/invalid", "")
 	chiCtx := chi.NewRouteContext()
@@ -80,7 +80,7 @@ func TestRaffleHandler_GetDetail_InvalidHex(t *testing.T) {
 }
 
 func TestRaffleHandler_Update_Unauthorized(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("PUT", "/api/v1/raffles/507f1f77bcf86cd799439011", `{}`)
 	resp := httptest.NewRecorder()
@@ -93,7 +93,7 @@ func TestRaffleHandler_Update_Unauthorized(t *testing.T) {
 }
 
 func TestRaffleHandler_Update_InvalidRaffleID(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("PUT", "/api/v1/raffles/invalid", `{}`)
 	chiCtx := chi.NewRouteContext()
@@ -111,7 +111,7 @@ func TestRaffleHandler_Update_InvalidRaffleID(t *testing.T) {
 }
 
 func TestRaffleHandler_Delete_Unauthorized(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("DELETE", "/api/v1/raffles/507f1f77bcf86cd799439011", "")
 	resp := httptest.NewRecorder()
@@ -124,7 +124,7 @@ func TestRaffleHandler_Delete_Unauthorized(t *testing.T) {
 }
 
 func TestRaffleHandler_Delete_InvalidRaffleID(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("DELETE", "/api/v1/raffles/invalid", "")
 	chiCtx := chi.NewRouteContext()
@@ -142,7 +142,7 @@ func TestRaffleHandler_Delete_InvalidRaffleID(t *testing.T) {
 }
 
 func TestRaffleHandler_Cancel_Unauthorized(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("POST", "/api/v1/raffles/507f1f77bcf86cd799439011/cancel", "")
 	resp := httptest.NewRecorder()
@@ -155,7 +155,7 @@ func TestRaffleHandler_Cancel_Unauthorized(t *testing.T) {
 }
 
 func TestRaffleHandler_Cancel_InvalidRaffleID(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("POST", "/api/v1/raffles/invalid/cancel", "")
 	chiCtx := chi.NewRouteContext()
@@ -173,7 +173,7 @@ func TestRaffleHandler_Cancel_InvalidRaffleID(t *testing.T) {
 }
 
 func TestRaffleHandler_MyRaffles_Unauthorized(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("GET", "/api/v1/raffles/mine", "")
 	resp := httptest.NewRecorder()
@@ -186,7 +186,7 @@ func TestRaffleHandler_MyRaffles_Unauthorized(t *testing.T) {
 }
 
 func TestRaffleHandler_Stats_Unauthorized(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("GET", "/api/v1/raffles/507f1f77bcf86cd799439011/stats", "")
 	resp := httptest.NewRecorder()
@@ -199,7 +199,7 @@ func TestRaffleHandler_Stats_Unauthorized(t *testing.T) {
 }
 
 func TestRaffleHandler_Stats_InvalidRaffleID(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("GET", "/api/v1/raffles/invalid/stats", "")
 	chiCtx := chi.NewRouteContext()
@@ -217,7 +217,7 @@ func TestRaffleHandler_Stats_InvalidRaffleID(t *testing.T) {
 }
 
 func TestRaffleHandler_DashboardStats_Unauthorized(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("GET", "/api/v1/raffles/dashboard/stats", "")
 	resp := httptest.NewRecorder()
@@ -230,7 +230,7 @@ func TestRaffleHandler_DashboardStats_Unauthorized(t *testing.T) {
 }
 
 func TestRaffleHandler_Draw_Unauthorized(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("POST", "/api/v1/raffles/507f1f77bcf86cd799439011/draw", "")
 	resp := httptest.NewRecorder()
@@ -243,7 +243,7 @@ func TestRaffleHandler_Draw_Unauthorized(t *testing.T) {
 }
 
 func TestRaffleHandler_Draw_InvalidRaffleID(t *testing.T) {
-	handler := NewRaffleHandler(nil)
+	handler := NewRaffleHandler(nil, nil)
 
 	req := makeRequest("POST", "/api/v1/raffles/invalid/draw", "")
 	chiCtx := chi.NewRouteContext()

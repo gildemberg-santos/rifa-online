@@ -112,7 +112,7 @@ func main() {
 	paymentService := service.NewPaymentService(raffleRepo, ticketRepo, paymentRepo, userRepo, infiniteClient, redisClient, cfg)
 	subscriptionService := service.NewSubscriptionService(userRepo, paymentRepo, infiniteClient, cfg)
 
-	raffleHandler := handler.NewRaffleHandler(raffleService)
+	raffleHandler := handler.NewRaffleHandler(raffleService, userRepo)
 	paymentHandler := handler.NewPaymentHandler(paymentService, paymentRepo, ticketRepo, userRepo)
 	webhookHandler := handler.NewWebhookHandler(paymentService, subscriptionService, webhookRepo, logger)
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)

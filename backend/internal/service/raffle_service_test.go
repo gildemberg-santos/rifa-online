@@ -46,7 +46,7 @@ func TestRaffleService_UpdateNilRepo(t *testing.T) {
 		}
 	}()
 
-	svc.Update(context.Background(), primitive.NewObjectID(), primitive.NewObjectID(), CreateRaffleInput{})
+	svc.Update(context.Background(), primitive.NewObjectID(), primitive.NewObjectID(), CreateRaffleInput{}, false)
 	t.Error("Update should have panicked with nil repo")
 }
 
@@ -59,7 +59,7 @@ func TestRaffleService_DeleteNilRepo(t *testing.T) {
 		}
 	}()
 
-	svc.Delete(context.Background(), primitive.NewObjectID(), primitive.NewObjectID())
+	svc.Delete(context.Background(), primitive.NewObjectID(), primitive.NewObjectID(), false)
 	t.Error("Delete should have panicked with nil repo")
 }
 
@@ -72,7 +72,7 @@ func TestRaffleService_CancelNilRepo(t *testing.T) {
 		}
 	}()
 
-	svc.Cancel(context.Background(), primitive.NewObjectID(), primitive.NewObjectID())
+	svc.Cancel(context.Background(), primitive.NewObjectID(), primitive.NewObjectID(), false)
 	t.Error("Cancel should have panicked with nil repo")
 }
 
@@ -85,6 +85,6 @@ func TestRaffleService_DrawNilRepo(t *testing.T) {
 		}
 	}()
 
-	svc.Draw(context.Background(), primitive.NewObjectID(), primitive.NewObjectID())
+	svc.Draw(context.Background(), primitive.NewObjectID(), primitive.NewObjectID(), false)
 	t.Error("Draw should have panicked with nil repo")
 }

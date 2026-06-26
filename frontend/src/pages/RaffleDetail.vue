@@ -153,7 +153,7 @@ function formatReservedAt(iso: string): string {
           </div>
           <router-link
             v-if="authStore.isAuthenticated && detail.raffle.status === 'ACTIVE'"
-            :to="`/dashboard/raffles/${detail.raffle.id}/edit`"
+            :to="`/dashboard/raffles/${detail.raffle.id}/edit?redirect=/raffles/${detail.raffle.id}`"
             class="bg-white/20 hover:bg-white/30 backdrop-blur rounded-xl px-3 py-2 md:px-4 md:py-2.5 text-center transition-colors"
           >
             <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Ações</p>
