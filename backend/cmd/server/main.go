@@ -159,6 +159,9 @@ func main() {
 				r.Use(subMw)
 				r.Get("/{id}", raffleHandler.GetDetail)
 				r.Post("/{id}/checkout", paymentHandler.Checkout)
+				if cfg.AppEnv == "development" {
+					r.Post("/{id}/dev-checkout", paymentHandler.DevCheckout)
+				}
 			})
 
 			r.Group(func(r chi.Router) {

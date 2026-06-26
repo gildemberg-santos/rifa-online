@@ -13,6 +13,7 @@ interface Raffle {
   maxNumbers: number
   status: string
   drawDate: string
+  winnerNumber?: number | null
 }
 
 interface DashboardStats {
@@ -68,17 +69,25 @@ async function deleteRaffle(id: string) {
   }
 }
 
+interface DrawResult {
+  winnerNumber: number
+}
+
 async function drawRaffle(id: string) {
   if (!confirm("Realizar sorteio?")) return
   try {
-    await api.post(`/raffles/${id}/draw`)
-    sendEvent("raffle_drawn", { raffle_id: id })
+    const result = await api.post<DrawResult>(`/raffles/${id}/draw`)
+    sendEvent("raffle_drawn", { raffle_id: id, winner_number: result.winnerNumber })
     const idx = raffles.value.findIndex((r) => r.id === id)
-    if (idx !== -1) raffles.value[idx].status = "DRAWN"
+    if (idx !== -1) {
+      raffles.value[idx].status = "DRAWN"
+      raffles.value[idx].winnerNumber = result.winnerNumber
+    }
     if (stats.value) {
       stats.value.activeRaffles--
       stats.value.drawnRaffles++
     }
+    alert(`Número vencedor: ${result.winnerNumber}`)
   } catch (e: any) {
     alert(e.message || "Erro ao realizar sorteio")
   }
@@ -331,13 +340,17 @@ function statusLabel(status: string) {
                     >
                       Sortear
                     </button>
-                    <router-link
-                      v-if="raffle.status === 'DRAWN'"
-                      :to="`/raffles/${raffle.id}/result`"
-                      class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                    >
-                      Resultado
-                    </router-link>
+                    <template v-if="raffle.status === 'DRAWN'">
+                      <span class="text-xs font-medium text-blue-600 whitespace-nowrap">
+                        Ganhador: {{ raffle.winnerNumber ?? '-' }}
+                      </span>
+                      <router-link
+                        :to="`/raffles/${raffle.id}/result`"
+                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      >
+                        Resultado
+                      </router-link>
+                    </template>
                     <button
                       @click="deleteRaffle(raffle.id)"
                       class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"

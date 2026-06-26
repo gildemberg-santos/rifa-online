@@ -17,6 +17,7 @@ interface Raffle {
   drawDate: string
   imageUrl?: string
   status: string
+  winnerNumber?: number | null
 }
 
 interface Ticket {
@@ -165,7 +166,20 @@ function formatReservedAt(iso: string): string {
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+      <div v-if="detail.raffle.status === 'DRAWN' && detail.raffle.winnerNumber" class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 mb-6 text-center animate-fade-in">
+        <div class="w-20 h-20 mx-auto bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg mb-3">
+          <span class="text-2xl font-extrabold text-white">{{ detail.raffle.winnerNumber }}</span>
+        </div>
+        <p class="text-lg font-bold text-green-800">Número vencedor!</p>
+        <p class="text-sm text-green-600 mt-1">Esta rifa já foi sorteada.</p>
+      </div>
+
+      <div v-if="detail.raffle.status === 'CANCELLED'" class="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-2xl p-6 mb-6 text-center animate-fade-in">
+        <p class="text-lg font-bold text-red-800">Rifa cancelada</p>
+        <p class="text-sm text-red-600 mt-1">Esta rifa não está mais disponível.</p>
+      </div>
+
+      <div v-if="detail.raffle.status === 'ACTIVE'" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Escolha seus números</h2>
 
         <NumberGrid

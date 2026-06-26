@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router"
 import { sendEvent } from "../utils/analytics"
 
 const titles: Record<string, string> = {
+  home: "Rifa Online - Plataforma de Rifas Online",
   "raffle-detail": "Detalhes da Rifa - Rifa Online",
   checkout: "Finalizar Compra - Rifa Online",
   "raffle-result": "Resultado do Sorteio - Rifa Online",
@@ -30,7 +31,8 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      redirect: "/dashboard",
+      name: "home",
+      component: () => import("../pages/Home.vue"),
     },
     {
       path: "/raffles/:id",
@@ -155,6 +157,10 @@ router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("accessToken")
   if (to.meta.requiresAuth && !token) {
     next({ name: "login", query: { redirect: to.fullPath } })
+    return
+  }
+  if (to.name === "home" && token) {
+    next({ name: "dashboard" })
     return
   }
   if (to.meta.requiresAdmin) {

@@ -156,6 +156,16 @@ const subscriptionBadge = computed(() => {
           </template>
           <template v-else>
             <router-link
+              to="/"
+              class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-all"
+              :class="isActive('/') ? 'text-indigo-700 bg-indigo-50 shadow-sm' : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50/60'"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              Início
+            </router-link>
+            <router-link
               to="/ajuda"
               class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-all"
               :class="isActive('/ajuda') ? 'text-indigo-700 bg-indigo-50 shadow-sm' : ''"
@@ -268,6 +278,12 @@ const subscriptionBadge = computed(() => {
         </template>
         <template v-else>
           <div class="py-3 space-y-1">
+            <router-link to="/" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg mx-2 transition-colors" @click="mobileOpen = false">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              Início
+            </router-link>
             <router-link to="/ajuda" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg mx-2 transition-colors" @click="mobileOpen = false">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

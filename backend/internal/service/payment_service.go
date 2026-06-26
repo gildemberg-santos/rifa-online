@@ -70,6 +70,89 @@ type CheckoutResult struct {
 	PaymentID   string `json:"paymentId"`
 }
 
+type DevCheckoutResult struct {
+	PaymentID   string `json:"paymentId"`
+	TicketCount int    `json:"ticketCount"`
+}
+
+func (s *PaymentService) CreateDevCheckout(ctx context.Context, input CheckoutInput) (*DevCheckoutResult, error) {
+	if input.BuyerName == "" || len(input.BuyerName) > 150 {
+		return nil, errors.New("buyer name must be between 1 and 150 characters")
+	}
+	if len(input.BuyerPhone) != 10 && len(input.BuyerPhone) != 11 {
+		return nil, errors.New("buyer phone must have 10 or 11 digits")
+	}
+
+	raffleID, err := primitive.ObjectIDFromHex(input.RaffleID)
+	if err != nil {
+		return nil, errors.New("invalid raffle id")
+	}
+
+	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
+	if err != nil {
+		return nil, ErrRaffleNotFound
+	}
+	if raffle.Status != model.RaffleStatusActive {
+		return nil, ErrRaffleNotActive
+	}
+
+	lockKeys := make([]string, len(input.Numbers))
+	for i, num := range input.Numbers {
+		lockKey := fmt.Sprintf("raffle:%s:reserve:%d", input.RaffleID, num)
+		lockKeys[i] = lockKey
+		ok, err := s.redisClient.SetNX(ctx, lockKey, input.BuyerEmail, 5*time.Minute).Result()
+		if err != nil {
+			return nil, fmt.Errorf("redis error: %w", err)
+		}
+		if !ok {
+			return nil, ErrNumbersUnavailable
+		}
+	}
+	defer func() {
+		if len(lockKeys) > 0 {
+			s.redisClient.Del(ctx, lockKeys...)
+		}
+	}()
+
+	var ticketIDs []primitive.ObjectID
+	for _, num := range input.Numbers {
+		ticket, err := s.ticketRepo.FindByRaffleAndNumber(ctx, raffleID, num)
+		if err != nil {
+			return nil, ErrNumbersUnavailable
+		}
+		if ticket.Status != model.TicketStatusAvailable {
+			return nil, ErrNumbersUnavailable
+		}
+		ticketIDs = append(ticketIDs, ticket.ID)
+	}
+
+	totalAmount := raffle.TicketPrice * len(input.Numbers)
+
+	payment := &model.Payment{
+		Type:        model.PaymentTypeRaffle,
+		RaffleID:    raffleID,
+		TicketIDs:   ticketIDs,
+		BuyerName:   input.BuyerName,
+		BuyerPhone:  input.BuyerPhone,
+		Amount:      totalAmount,
+		Status:      model.PaymentStatusPaid,
+		PaymentMethod: model.PaymentMethodPIX,
+	}
+
+	if err := s.paymentRepo.Insert(ctx, payment); err != nil {
+		return nil, err
+	}
+
+	if err := s.ticketRepo.MarkAsPaid(ctx, ticketIDs, input.BuyerName, input.BuyerPhone, payment.ID.Hex()); err != nil {
+		return nil, err
+	}
+
+	return &DevCheckoutResult{
+		PaymentID:   payment.ID.Hex(),
+		TicketCount: len(ticketIDs),
+	}, nil
+}
+
 func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput) (*CheckoutResult, error) {
 	if input.BuyerName == "" || len(input.BuyerName) > 150 {
 		return nil, errors.New("buyer name must be between 1 and 150 characters")

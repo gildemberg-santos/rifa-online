@@ -36,6 +36,51 @@ type checkoutRequest struct {
 	BuyerPhone string `json:"buyerPhone"`
 }
 
+func (h *PaymentHandler) DevCheckout(w http.ResponseWriter, r *http.Request) {
+	raffleID := chi.URLParam(r, "id")
+
+	var req checkoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.Numbers) == 0 {
+		writeError(w, "at least one number is required", http.StatusBadRequest)
+		return
+	}
+	if req.BuyerName == "" || req.BuyerPhone == "" {
+		writeError(w, "buyer name and phone are required", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.paymentService.CreateDevCheckout(r.Context(), service.CheckoutInput{
+		RaffleID:   raffleID,
+		Numbers:    req.Numbers,
+		BuyerName:  req.BuyerName,
+		BuyerEmail: req.BuyerEmail,
+		BuyerPhone: req.BuyerPhone,
+	})
+	if err != nil {
+		if errors.Is(err, service.ErrRaffleNotFound) {
+			writeError(w, "raffle not found", http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, service.ErrRaffleNotActive) {
+			writeError(w, "raffle is not active", http.StatusBadRequest)
+			return
+		}
+		if errors.Is(err, service.ErrNumbersUnavailable) {
+			writeError(w, "one or more numbers are unavailable", http.StatusConflict)
+			return
+		}
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
 func (h *PaymentHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	raffleID := chi.URLParam(r, "id")
 
