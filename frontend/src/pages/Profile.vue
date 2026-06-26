@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { api } from "../utils/api"
+import howToAccount from "../assets/how-to-account.webp"
 
 interface User {
   id: string
@@ -235,7 +236,7 @@ function subscriptionColor(status: string): string {
           Conecte sua conta InfinitePay para receber os pagamentos das rifas diretamente.
         </p>
 
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm text-blue-900 space-y-2">
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm text-blue-900 space-y-3">
           <p class="font-semibold">Onde encontrar seu handle no app InfinitePay:</p>
           <ol class="list-decimal list-inside space-y-1 text-blue-800">
             <li>Abra o aplicativo da <strong>InfinitePay</strong> no seu celular</li>
@@ -243,9 +244,10 @@ function subscriptionColor(status: string): string {
             <li>Procure por <strong>"InfiniteTag"</strong> ou <strong>"Meu perfil"</strong></li>
             <li>O handle é o nome de usuário que aparece com <strong>$</strong> na frente (ex: <em>$fulano</em>)</li>
           </ol>
-          <p class="text-blue-700 mt-1">
+          <p class="text-blue-700">
             <strong>Importante:</strong> informe apenas o nome, <strong>sem o $</strong> (ex: <em>fulano</em>).
           </p>
+          <img :src="howToAccount" alt="Exemplo do perfil InfinitePay" class="w-full rounded-lg border border-blue-200 mt-1" />
         </div>
 
         <form @submit.prevent="saveHandle" class="space-y-4">
