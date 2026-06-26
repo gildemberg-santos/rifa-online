@@ -290,7 +290,11 @@ function statusLabel(status: string) {
             </thead>
             <tbody class="divide-y divide-gray-100">
               <tr v-for="raffle in raffles" :key="raffle.id" class="hover:bg-gray-50 transition-colors">
-                <td class="px-5 py-4 font-medium text-gray-900">{{ raffle.title }}</td>
+                <td class="px-5 py-4">
+                  <router-link :to="`/raffles/${raffle.id}`" class="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">
+                    {{ raffle.title }}
+                  </router-link>
+                </td>
                 <td class="px-5 py-4">
                   <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold" :class="statusBadge(raffle.status)">
                     {{ statusLabel(raffle.status) }}
@@ -300,6 +304,16 @@ function statusLabel(status: string) {
                 <td class="px-5 py-4 text-gray-700">{{ raffle.maxNumbers }}</td>
                 <td class="px-5 py-4">
                   <div class="flex gap-2">
+                    <router-link
+                      :to="`/raffles/${raffle.id}`"
+                      class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <svg class="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Visualizar
+                    </router-link>
                     <router-link
                       v-if="raffle.status === 'ACTIVE'"
                       :to="`/dashboard/raffles/${raffle.id}/edit`"
