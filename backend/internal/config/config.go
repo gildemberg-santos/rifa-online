@@ -18,6 +18,7 @@ type Config struct {
 	InfinitePayHandle  string
 	InfinitePayBaseURL string
 	FrontendURL        string
+	AppURL             string
 	DataEncryptionKey  string
 	BlindIndexKey      string
 	LogLevel           slog.Level
@@ -52,6 +53,7 @@ func Load() *Config {
 		InfinitePayHandle:  getEnv("INFINITEPAY_HANDLE", ""),
 		InfinitePayBaseURL: infinitePayBaseURL,
 		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
+		AppURL:             getEnv("APP_URL", "http://localhost:8080"),
 		DataEncryptionKey:  getEnv("DATA_ENCRYPTION_KEY", ""),
 		BlindIndexKey:      getEnv("BLIND_INDEX_KEY", ""),
 		LogLevel:           level,

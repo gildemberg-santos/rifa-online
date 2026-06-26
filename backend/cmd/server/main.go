@@ -105,7 +105,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, cfg)
 	authHandler := handler.NewAuthHandler(authService, cfg)
 
-	webhookURL := cfg.FrontendURL + "/api/v1/webhooks/infinitepay"
+	webhookURL := cfg.AppURL + "/api/v1/webhooks/infinitepay"
 	infiniteClient := infinitepay.NewClient(cfg.InfinitePayHandle, webhookURL, cfg.FrontendURL, cfg.InfinitePayBaseURL)
 
 	raffleService := service.NewRaffleService(raffleRepo, ticketRepo, paymentRepo, userRepo)
