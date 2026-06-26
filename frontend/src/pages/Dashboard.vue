@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { api } from "../utils/api"
-import { useAuthStore } from "../stores/auth"
 import { sendEvent } from "../utils/analytics"
+import { useNotification } from "../composables/useNotification"
 
 const auth = useAuthStore()
 
@@ -34,6 +34,7 @@ const isTrial = ref(false)
 const raffles = ref<Raffle[]>([])
 const stats = ref<DashboardStats | null>(null)
 const loading = ref(true)
+const notify = useNotification()
 
 onMounted(async () => {
   try {
@@ -65,7 +66,7 @@ async function deleteRaffle(id: string) {
     sendEvent("raffle_deleted", { raffle_id: id })
     raffles.value = raffles.value.filter((r) => r.id !== id)
   } catch (e: any) {
-    alert(e.message || "Erro ao excluir rifa")
+    notify.show(e.message || "Erro ao excluir rifa", "error")
   }
 }
 
@@ -87,9 +88,9 @@ async function drawRaffle(id: string) {
       stats.value.activeRaffles--
       stats.value.drawnRaffles++
     }
-    alert(`Número vencedor: ${result.winnerNumber}`)
+    notify.show(`Número vencedor: ${result.winnerNumber}`, "success")
   } catch (e: any) {
-    alert(e.message || "Erro ao realizar sorteio")
+    notify.show(e.message || "Erro ao realizar sorteio", "error")
   }
 }
 
