@@ -8,21 +8,67 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"github.com/user/rifa-online/internal/crypto"
 	"github.com/user/rifa-online/internal/model"
 )
 
 type PaymentRepo struct {
-	coll *mongo.Collection
+	coll   *mongo.Collection
+	cipher *crypto.Cipher
 }
 
-func NewPaymentRepo(db *mongo.Database) *PaymentRepo {
-	return &PaymentRepo{coll: db.Collection("payments")}
+func NewPaymentRepo(db *mongo.Database, cipher *crypto.Cipher) *PaymentRepo {
+	return &PaymentRepo{coll: db.Collection("payments"), cipher: cipher}
+}
+
+// encrypt cifra os campos sensíveis e calcula o índice cego do telefone.
+func (r *PaymentRepo) encrypt(p *model.Payment) error {
+	var err error
+	p.BuyerPhoneIndex = r.cipher.BlindIndex(p.BuyerPhone)
+	if p.BuyerName, err = r.cipher.Encrypt(p.BuyerName); err != nil {
+		return err
+	}
+	if p.BuyerEmail, err = r.cipher.Encrypt(p.BuyerEmail); err != nil {
+		return err
+	}
+	if p.BuyerPhone, err = r.cipher.Encrypt(p.BuyerPhone); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PaymentRepo) decrypt(p *model.Payment) error {
+	var err error
+	if p.BuyerName, err = r.cipher.Decrypt(p.BuyerName); err != nil {
+		return err
+	}
+	if p.BuyerEmail, err = r.cipher.Decrypt(p.BuyerEmail); err != nil {
+		return err
+	}
+	if p.BuyerPhone, err = r.cipher.Decrypt(p.BuyerPhone); err != nil {
+		return err
+	}
+	p.BuyerPhoneIndex = ""
+	return nil
+}
+
+func (r *PaymentRepo) decryptAll(ps []model.Payment) error {
+	for i := range ps {
+		if err := r.decrypt(&ps[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *PaymentRepo) Insert(ctx context.Context, payment *model.Payment) error {
 	payment.ID = primitive.NewObjectID()
 	payment.CreatedAt = time.Now()
-	_, err := r.coll.InsertOne(ctx, payment)
+	doc := *payment
+	if err := r.encrypt(&doc); err != nil {
+		return err
+	}
+	_, err := r.coll.InsertOne(ctx, &doc)
 	return err
 }
 
@@ -32,6 +78,9 @@ func (r *PaymentRepo) FindByID(ctx context.Context, id primitive.ObjectID) (*mod
 	if err != nil {
 		return nil, err
 	}
+	if err := r.decrypt(&payment); err != nil {
+		return nil, err
+	}
 	return &payment, nil
 }
 
@@ -39,6 +88,9 @@ func (r *PaymentRepo) FindByInvoiceSlug(ctx context.Context, slug string) (*mode
 	var payment model.Payment
 	err := r.coll.FindOne(ctx, bson.M{"invoiceSlug": slug}).Decode(&payment)
 	if err != nil {
+		return nil, err
+	}
+	if err := r.decrypt(&payment); err != nil {
 		return nil, err
 	}
 	return &payment, nil
@@ -52,6 +104,8 @@ func (r *PaymentRepo) FindByOrderNSU(ctx context.Context, orderNSU string) (*mod
 	return r.FindByID(ctx, oid)
 }
 
+// FindByEmail busca por buyerEmail (campo agora criptografado, sem índice). Não
+// é usado em nenhum fluxo ativo; mantido por compatibilidade.
 func (r *PaymentRepo) FindByEmail(ctx context.Context, email string) ([]model.Payment, error) {
 	cursor, err := r.coll.Find(ctx, bson.M{"buyerEmail": email})
 	if err != nil {
@@ -61,16 +115,22 @@ func (r *PaymentRepo) FindByEmail(ctx context.Context, email string) ([]model.Pa
 	if err := cursor.All(ctx, &payments); err != nil {
 		return nil, err
 	}
+	if err := r.decryptAll(payments); err != nil {
+		return nil, err
+	}
 	return payments, nil
 }
 
 func (r *PaymentRepo) FindByBuyerPhone(ctx context.Context, phone string) ([]model.Payment, error) {
-	cursor, err := r.coll.Find(ctx, bson.M{"buyerPhone": phone})
+	cursor, err := r.coll.Find(ctx, bson.M{"buyerPhoneIndex": r.cipher.BlindIndex(phone)})
 	if err != nil {
 		return nil, err
 	}
 	payments := make([]model.Payment, 0)
 	if err := cursor.All(ctx, &payments); err != nil {
+		return nil, err
+	}
+	if err := r.decryptAll(payments); err != nil {
 		return nil, err
 	}
 	return payments, nil
@@ -83,6 +143,9 @@ func (r *PaymentRepo) FindByRaffle(ctx context.Context, raffleID primitive.Objec
 	}
 	payments := make([]model.Payment, 0)
 	if err := cursor.All(ctx, &payments); err != nil {
+		return nil, err
+	}
+	if err := r.decryptAll(payments); err != nil {
 		return nil, err
 	}
 	return payments, nil
@@ -116,7 +179,11 @@ func (r *PaymentRepo) UpdateStatus(ctx context.Context, id primitive.ObjectID, s
 }
 
 func (r *PaymentRepo) Update(ctx context.Context, payment *model.Payment) error {
-	_, err := r.coll.UpdateOne(ctx, bson.M{"_id": payment.ID}, bson.M{"$set": payment})
+	doc := *payment
+	if err := r.encrypt(&doc); err != nil {
+		return err
+	}
+	_, err := r.coll.UpdateOne(ctx, bson.M{"_id": doc.ID}, bson.M{"$set": doc})
 	return err
 }
 
@@ -176,6 +243,9 @@ func (r *PaymentRepo) FindPendingSubscriptionByUserID(ctx context.Context, userI
 	if err := cursor.All(ctx, &payments); err != nil {
 		return nil, err
 	}
+	if err := r.decryptAll(payments); err != nil {
+		return nil, err
+	}
 	return payments, nil
 }
 
@@ -186,6 +256,9 @@ func (r *PaymentRepo) FindByUserID(ctx context.Context, userID primitive.ObjectI
 	}
 	var payments []model.Payment
 	if err := cursor.All(ctx, &payments); err != nil {
+		return nil, err
+	}
+	if err := r.decryptAll(payments); err != nil {
 		return nil, err
 	}
 	return payments, nil

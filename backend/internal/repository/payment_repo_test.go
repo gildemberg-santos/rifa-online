@@ -11,7 +11,7 @@ import (
 
 func TestPaymentRepo(t *testing.T) {
 	ctx := context.Background()
-	repo := NewPaymentRepo(testDB)
+	repo := NewPaymentRepo(testDB, testCipher)
 	raffleID := primitive.NewObjectID()
 
 	makePayment := func(email, slug string) *model.Payment {

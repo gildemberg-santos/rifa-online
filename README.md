@@ -101,6 +101,8 @@ Usuário admin padrão é criado automaticamente: **admin@email.com** / **123456
 | `INFINITEPAY_HANDLE` | _(vazio)_ | Handle da plataforma (recebe as assinaturas) |
 | `INFINITEPAY_BASE_URL` | `https://api.checkout.infinitepay.io` | Base da API InfinitePay |
 | `FRONTEND_URL` | `http://localhost:5173` | URL do front (CORS + base do `webhook_url`) |
+| `DATA_ENCRYPTION_KEY` | _(vazio)_ | Chave de criptografia de campos sensíveis em repouso (AES-256-GCM). Vazio = sem criptografia |
+| `BLIND_INDEX_KEY` | _(vazio)_ | Chave do índice cego (HMAC) para buscas sobre campos criptografados |
 | `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
 | `LOG_FORMAT` | `text` | `text` \| `json` |
 

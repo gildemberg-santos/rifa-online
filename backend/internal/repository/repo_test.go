@@ -9,9 +9,12 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/user/rifa-online/internal/crypto"
 )
 
 var testDB *mongo.Database
+var testCipher, _ = crypto.New("test-data-key", "test-index-key")
 
 func TestMain(m *testing.M) {
 	uri := os.Getenv("MONGODB_TEST_URI")

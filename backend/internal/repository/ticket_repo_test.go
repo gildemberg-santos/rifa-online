@@ -10,7 +10,7 @@ import (
 
 func TestTicketRepo(t *testing.T) {
 	ctx := context.Background()
-	repo := NewTicketRepo(testDB)
+	repo := NewTicketRepo(testDB, testCipher)
 	raffleID := primitive.NewObjectID()
 
 	makeTicket := func(number int) model.Ticket {
