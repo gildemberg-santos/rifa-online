@@ -1,6 +1,31 @@
 import { createRouter, createWebHistory } from "vue-router"
 import Home from "../pages/Home.vue"
 
+const titles: Record<string, string> = {
+  home: "Rifa Online - Plataforma de Rifas Online",
+  "raffle-detail": "Detalhes da Rifa - Rifa Online",
+  checkout: "Finalizar Compra - Rifa Online",
+  "raffle-result": "Resultado do Sorteio - Rifa Online",
+  "payment-success": "Pagamento Confirmado - Rifa Online",
+  "payment-pending": "Aguardando Pagamento - Rifa Online",
+  login: "Entrar - Rifa Online",
+  register: "Criar Conta - Rifa Online",
+  dashboard: "Dashboard - Rifa Online",
+  "create-raffle": "Nova Rifa - Rifa Online",
+  "edit-raffle": "Editar Rifa - Rifa Online",
+  profile: "Meu Perfil - Rifa Online",
+  subscription: "Assinatura - Rifa Online",
+  "my-purchases": "Minhas Compras - Rifa Online",
+  admin: "Admin - Rifa Online",
+  "terms-of-use": "Termos de Uso - Rifa Online",
+  "privacy-policy": "Política de Privacidade - Rifa Online",
+  "cookie-policy": "Política de Cookies - Rifa Online",
+  "organizer-terms": "Termo do Organizador - Rifa Online",
+  contact: "Contato - Rifa Online",
+  help: "Central de Ajuda - Rifa Online",
+  "help-article": "Ajuda - Rifa Online",
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -153,6 +178,11 @@ router.beforeEach((to, _from, next) => {
     }
   }
   next()
+})
+
+router.afterEach((to) => {
+  const name = to.name as string
+  document.title = titles[name] || "Rifa Online - Plataforma de Rifas Online"
 })
 
 export default router
