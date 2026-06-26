@@ -245,7 +245,7 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		Items: []infinitepay.CheckoutItem{
 			{
 				Quantity:    len(input.Numbers),
-				Price:       totalAmount,
+				Price:       raffle.TicketPrice,
 				Description: fmt.Sprintf("%d números - %s", len(input.Numbers), raffle.Title),
 			},
 		},
@@ -253,6 +253,7 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 		WebhookURL: webhookURL,
 		Customer: &infinitepay.Customer{
 			Name:        input.BuyerName,
+			Email:       input.BuyerEmail,
 			PhoneNumber: input.BuyerPhone,
 		},
 	})
