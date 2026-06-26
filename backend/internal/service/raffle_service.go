@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"math"
+	"math/big"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -363,7 +365,11 @@ func (s *RaffleService) Draw(ctx context.Context, raffleID primitive.ObjectID, o
 		return nil, errors.New("no paid tickets to draw from")
 	}
 
-	winner := paidTickets[time.Now().UnixNano()%int64(len(paidTickets))]
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(paidTickets))))
+	if err != nil {
+		return nil, errors.New("failed to generate random winner")
+	}
+	winner := paidTickets[n.Int64()]
 
 	if err := s.raffleRepo.UpdateWinner(ctx, raffleID, winner.Number); err != nil {
 		return nil, err
