@@ -38,7 +38,6 @@ const router = createRouter({
       path: "/raffles/:id",
       name: "raffle-detail",
       component: () => import("../pages/RaffleDetail.vue"),
-      meta: { requiresAuth: true },
     },
     {
       path: "/raffles/:id/checkout",
@@ -50,7 +49,6 @@ const router = createRouter({
       path: "/raffles/:id/result",
       name: "raffle-result",
       component: () => import("../pages/RaffleResult.vue"),
-      meta: { requiresAuth: true },
     },
     {
       path: "/payment/success",

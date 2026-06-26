@@ -153,11 +153,11 @@ func main() {
 
 		r.Route("/raffles", func(r chi.Router) {
 			r.Get("/", raffleHandler.List)
+			r.Get("/{id}", raffleHandler.GetDetail)
 
 			r.Group(func(r chi.Router) {
 				r.Use(authMw)
 				r.Use(subMw)
-				r.Get("/{id}", raffleHandler.GetDetail)
 				r.Post("/{id}/checkout", paymentHandler.Checkout)
 				if cfg.AppEnv == "development" {
 					r.Post("/{id}/dev-checkout", paymentHandler.DevCheckout)

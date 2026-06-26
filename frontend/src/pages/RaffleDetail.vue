@@ -56,10 +56,12 @@ function shareRaffle() {
 
 onMounted(async () => {
   try {
-    const status = await api.get<{ subscriptionStatus: string }>("/subscription/status")
-    if (status.subscriptionStatus !== "ACTIVE") {
-      router.push({ name: "subscription" })
-      return
+    if (authStore.isAuthenticated) {
+      const status = await api.get<{ subscriptionStatus: string }>("/subscription/status").catch(() => null)
+      if (status && status.subscriptionStatus !== "ACTIVE") {
+        router.push({ name: "subscription" })
+        return
+      }
     }
 
     detail.value = await api.get<RaffleDetail>(`/raffles/${route.params.id}`)
