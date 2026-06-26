@@ -249,6 +249,24 @@ func (r *PaymentRepo) SumAllPaid(ctx context.Context) (int64, error) {
 	return results[0].Total, nil
 }
 
+func (r *PaymentRepo) FindPendingRafflePayments(ctx context.Context) ([]model.Payment, error) {
+	cursor, err := r.coll.Find(ctx, bson.M{
+		"type":   model.PaymentTypeRaffle,
+		"status": model.PaymentStatusPending,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var payments []model.Payment
+	if err := cursor.All(ctx, &payments); err != nil {
+		return nil, err
+	}
+	if err := r.decryptAll(payments); err != nil {
+		return nil, err
+	}
+	return payments, nil
+}
+
 func (r *PaymentRepo) FindPendingSubscriptionByUserID(ctx context.Context, userID primitive.ObjectID) ([]model.Payment, error) {
 	cursor, err := r.coll.Find(ctx, bson.M{
 		"userId": userID,

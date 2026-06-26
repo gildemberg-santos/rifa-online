@@ -119,6 +119,9 @@ func main() {
 	adminHandler := handler.NewAdminHandler(userRepo, raffleRepo, ticketRepo, paymentRepo)
 	contactHandler := handler.NewContactHandler(contactRepo)
 
+	confirmInterval := 2 * time.Minute
+	go retryPendingPayments(logger, paymentService, confirmInterval)
+
 	authMw := middleware.Auth(cfg)
 
 	r := chi.NewRouter()
@@ -180,11 +183,7 @@ func main() {
 			r.Get("/my", paymentHandler.MyPayments)
 			r.Get("/{id}", paymentHandler.GetPayment)
 			r.Get("/my/tickets", paymentHandler.MyTickets)
-
-			r.Group(func(r chi.Router) {
-				r.Use(authMw)
-				r.Post("/{id}/confirm", paymentHandler.ConfirmPayment)
-			})
+			r.Post("/{id}/confirm", paymentHandler.ConfirmPayment)
 		})
 
 		r.Post("/webhooks/infinitepay", webhookHandler.HandleInfinitePay)
@@ -222,6 +221,7 @@ func main() {
 			r.Get("/raffles", adminHandler.Raffles)
 			r.Get("/stats", adminHandler.Stats)
 			r.Get("/contact-messages", contactHandler.List)
+			r.Post("/confirm-payment/{id}", adminHandler.ConfirmPayment)
 		})
 	})
 
@@ -360,6 +360,31 @@ func cleanupExpiredReservations(logger *slog.Logger, ticketRepo *repository.Tick
 
 		if releasedCount > 0 || expiredCount > 0 {
 			logger.Info("reservation cleanup complete", "released", releasedCount, "expired_payments", expiredCount)
+		}
+
+		cancel()
+	}
+}
+
+func retryPendingPayments(logger *slog.Logger, paymentService *service.PaymentService, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		payments, err := paymentService.FindPendingRafflePayments(ctx)
+		if err != nil {
+			logger.Error("failed to find pending raffle payments", "error", err)
+			cancel()
+			continue
+		}
+
+		for _, p := range payments {
+			if _, err := paymentService.ConfirmRafflePayment(ctx, p.ID.Hex()); err != nil {
+				logger.Debug("pending payment still not confirmed", "payment_id", p.ID.Hex(), "error", err)
+			} else {
+				logger.Info("pending payment auto-confirmed", "payment_id", p.ID.Hex())
+			}
 		}
 
 		cancel()

@@ -65,8 +65,16 @@ func TestTicketRepo(t *testing.T) {
 			t.Fatalf("expected 2 ticket IDs, got %d", len(ids))
 		}
 
-		if err := repo.MarkAsPaid(ctx, ids, "Buyer", "11999999999", "pay_123"); err != nil {
+		if err := repo.MarkAsReserved(ctx, ids); err != nil {
+			t.Fatalf("MarkAsReserved: %v", err)
+		}
+
+		count, err := repo.MarkAsPaid(ctx, ids, "Buyer", "11999999999", "pay_123")
+		if err != nil {
 			t.Fatalf("MarkAsPaid: %v", err)
+		}
+		if count != 2 {
+			t.Fatalf("expected 2 paid tickets, got %d", count)
 		}
 
 		paid, _ := repo.FindByRaffleAndStatus(ctx, raffleID, model.TicketStatusPaid)

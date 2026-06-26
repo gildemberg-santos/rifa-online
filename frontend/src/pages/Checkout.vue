@@ -12,6 +12,7 @@ const numbers = computed(() =>
 )
 
 const buyerName = ref("")
+const buyerEmail = ref("")
 const buyerPhone = ref("")
 const acceptedTerms = ref(false)
 const loading = ref(false)
@@ -48,6 +49,7 @@ async function submit() {
     const result = await api.post<{ checkoutUrl: string }>(`/raffles/${raffleId}/checkout`, {
       numbers: numbers.value,
       buyerName: buyerName.value,
+      buyerEmail: buyerEmail.value,
       buyerPhone: buyerPhone.value.replace(/\D/g, ""),
     })
     sendEvent("checkout_started", { raffle_id: raffleId, numbers_count: numbers.value.length })
@@ -106,6 +108,18 @@ async function submit() {
           <p v-if="buyerPhone && !isValidPhone(buyerPhone)" class="text-xs text-red-500 mt-1.5">
             Telefone inválido. Informe DDD + número com 11 dígitos.
           </p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">E-mail</label>
+          <input
+            v-model="buyerEmail"
+            type="email"
+            required
+            maxlength="200"
+            placeholder="seu@email.com"
+            class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
+          />
         </div>
 
         <label class="flex items-start gap-2 text-sm text-gray-600">

@@ -147,18 +147,20 @@ func (r *TicketRepo) Update(ctx context.Context, ticket *model.Ticket) error {
 	return err
 }
 
-func (r *TicketRepo) MarkAsPaid(ctx context.Context, ids []primitive.ObjectID, buyerName, buyerPhone, paymentID string) error {
+func (r *TicketRepo) ForceMarkAsPaid(ctx context.Context, ids []primitive.ObjectID, buyerName, buyerPhone, paymentID string) (int64, error) {
 	now := time.Now()
 	encName, err := r.cipher.Encrypt(buyerName)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	phoneIndex := r.cipher.BlindIndex(buyerPhone)
 	encPhone, err := r.cipher.Encrypt(buyerPhone)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	_, err = r.coll.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": ids}}, bson.M{
+	result, err := r.coll.UpdateMany(ctx, bson.M{
+		"_id": bson.M{"$in": ids},
+	}, bson.M{
 		"$set": bson.M{
 			"status":          model.TicketStatusPaid,
 			"buyerName":       encName,
@@ -168,7 +170,40 @@ func (r *TicketRepo) MarkAsPaid(ctx context.Context, ids []primitive.ObjectID, b
 			"paidAt":          now,
 		},
 	})
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.ModifiedCount, nil
+}
+
+func (r *TicketRepo) MarkAsPaid(ctx context.Context, ids []primitive.ObjectID, buyerName, buyerPhone, paymentID string) (int64, error) {
+	now := time.Now()
+	encName, err := r.cipher.Encrypt(buyerName)
+	if err != nil {
+		return 0, err
+	}
+	phoneIndex := r.cipher.BlindIndex(buyerPhone)
+	encPhone, err := r.cipher.Encrypt(buyerPhone)
+	if err != nil {
+		return 0, err
+	}
+	result, err := r.coll.UpdateMany(ctx, bson.M{
+		"_id":    bson.M{"$in": ids},
+		"status": model.TicketStatusReserved,
+	}, bson.M{
+		"$set": bson.M{
+			"status":          model.TicketStatusPaid,
+			"buyerName":       encName,
+			"buyerPhone":      encPhone,
+			"buyerPhoneIndex": phoneIndex,
+			"paymentId":       paymentID,
+			"paidAt":          now,
+		},
+	})
+	if err != nil {
+		return 0, err
+	}
+	return result.ModifiedCount, nil
 }
 
 func (r *TicketRepo) MarkAsReserved(ctx context.Context, ids []primitive.ObjectID) error {

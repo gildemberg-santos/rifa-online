@@ -231,3 +231,33 @@ func (h *AdminHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		PastDueUsers:     pastDueUsers,
 	})
 }
+
+func (h *AdminHandler) ConfirmPayment(w http.ResponseWriter, r *http.Request) {
+	paymentID := chi.URLParam(r, "id")
+	oid, err := primitive.ObjectIDFromHex(paymentID)
+	if err != nil {
+		writeError(w, "invalid payment id", http.StatusBadRequest)
+		return
+	}
+
+	payment, err := h.paymentRepo.FindByID(r.Context(), oid)
+	if err != nil {
+		writeError(w, "payment not found", http.StatusNotFound)
+		return
+	}
+
+	now := time.Now()
+	if err := h.paymentRepo.UpdateStatus(r.Context(), payment.ID, model.PaymentStatusPaid, &now); err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(payment.TicketIDs) > 0 {
+		if _, err := h.ticketRepo.ForceMarkAsPaid(r.Context(), payment.TicketIDs, payment.BuyerName, payment.BuyerPhone, payment.ID.Hex()); err != nil {
+			writeError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "confirmed"})
+}

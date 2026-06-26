@@ -143,7 +143,7 @@ func (s *PaymentService) CreateDevCheckout(ctx context.Context, input CheckoutIn
 		return nil, err
 	}
 
-	if err := s.ticketRepo.MarkAsPaid(ctx, ticketIDs, input.BuyerName, input.BuyerPhone, payment.ID.Hex()); err != nil {
+	if _, err := s.ticketRepo.MarkAsPaid(ctx, ticketIDs, input.BuyerName, input.BuyerPhone, payment.ID.Hex()); err != nil {
 		return nil, err
 	}
 
@@ -237,8 +237,10 @@ func (s *PaymentService) CreateCheckout(ctx context.Context, input CheckoutInput
 	}
 
 	webhookURL := s.cfg.FrontendURL + "/api/v1/webhooks/infinitepay"
+	redirectURL := s.cfg.FrontendURL + "/payment/success?paymentId=" + payment.ID.Hex()
 
 	checkout, err := s.infiniteClient.CreateCheckout(infinitepay.CreateCheckoutRequest{
+		RedirectURL: redirectURL,
 		Handle: infinitePayHandle,
 		Items: []infinitepay.CheckoutItem{
 			{
@@ -347,6 +349,10 @@ func (s *PaymentService) GetPaymentByID(ctx context.Context, paymentID string) (
 	return s.paymentRepo.FindByID(ctx, oid)
 }
 
+func (s *PaymentService) FindPendingRafflePayments(ctx context.Context) ([]model.Payment, error) {
+	return s.paymentRepo.FindPendingRafflePayments(ctx)
+}
+
 // resolveRaffleHandle returns the InfinitePay handle used to settle a raffle
 // payment: the organizer's own handle, falling back to the platform handle.
 func (s *PaymentService) resolveRaffleHandle(ctx context.Context, raffleID primitive.ObjectID) string {
@@ -413,8 +419,12 @@ func (s *PaymentService) ConfirmRafflePayment(ctx context.Context, paymentID str
 		return nil, err
 	}
 
-	if err := s.ticketRepo.MarkAsPaid(ctx, payment.TicketIDs, payment.BuyerName, payment.BuyerPhone, payment.ID.Hex()); err != nil {
+	updated, err := s.ticketRepo.MarkAsPaid(ctx, payment.TicketIDs, payment.BuyerName, payment.BuyerPhone, payment.ID.Hex())
+	if err != nil {
 		return nil, err
+	}
+	if updated == 0 && len(payment.TicketIDs) > 0 {
+		return nil, errors.New("tickets no longer available (reservation expired)")
 	}
 
 	payment.Status = model.PaymentStatusPaid
