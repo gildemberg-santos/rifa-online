@@ -5,17 +5,52 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/user/rifa-online/internal/config"
 	"github.com/user/rifa-online/internal/middleware"
 	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/service"
 )
 
+const (
+	refreshCookieName   = "refresh_token"
+	refreshCookieMaxAge = 7 * 24 * 60 * 60 // 7 dias, igual ao TTL do refresh token
+	refreshCookiePath   = "/api/v1/auth"
+)
+
 type AuthHandler struct {
 	authService *service.AuthService
+	cfg         *config.Config
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService *service.AuthService, cfg *config.Config) *AuthHandler {
+	return &AuthHandler{authService: authService, cfg: cfg}
+}
+
+// setRefreshCookie grava o refresh token num cookie HttpOnly (inacessível ao JS,
+// protegendo contra XSS). Secure é ligado fora de desenvolvimento; SameSite=Lax
+// mitiga CSRF.
+func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    token,
+		Path:     refreshCookiePath,
+		MaxAge:   refreshCookieMaxAge,
+		HttpOnly: true,
+		Secure:   h.cfg.AppEnv != "development",
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func (h *AuthHandler) clearRefreshCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    "",
+		Path:     refreshCookiePath,
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   h.cfg.AppEnv != "development",
+		SameSite: http.SameSiteLaxMode,
+	})
 }
 
 type registerRequest struct {
@@ -34,20 +69,20 @@ type refreshRequest struct {
 }
 
 type authResponse struct {
-	User         *userResponse `json:"user"`
-	AccessToken  string        `json:"accessToken"`
-	RefreshToken string        `json:"refreshToken"`
+	User        *userResponse `json:"user"`
+	AccessToken string        `json:"accessToken"`
+	// O refresh token NÃO é mais devolvido no corpo: ele vive apenas no cookie HttpOnly.
 }
 
 type userResponse struct {
-	ID                 string                  `json:"id"`
-	Name               string                  `json:"name"`
-	Email              string                  `json:"email"`
-	Role               model.Role              `json:"role"`
-	Phone              string                  `json:"phone,omitempty"`
-	InfinitePayHandle  string                  `json:"infinitePayHandle,omitempty"`
-	SubscriptionStatus model.SubscriptionStatus `json:"subscriptionStatus"`
-	SubscriptionIsTrial bool                   `json:"subscriptionIsTrial"`
+	ID                  string                   `json:"id"`
+	Name                string                   `json:"name"`
+	Email               string                   `json:"email"`
+	Role                model.Role               `json:"role"`
+	Phone               string                   `json:"phone,omitempty"`
+	InfinitePayHandle   string                   `json:"infinitePayHandle,omitempty"`
+	SubscriptionStatus  model.SubscriptionStatus `json:"subscriptionStatus"`
+	SubscriptionIsTrial bool                     `json:"subscriptionIsTrial"`
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +106,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.setRefreshCookie(w, result.RefreshToken)
 	writeJSON(w, http.StatusCreated, toAuthResponse(result))
 }
 
@@ -94,6 +130,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.setRefreshCookie(w, result.RefreshToken)
 	writeJSON(w, http.StatusOK, toAuthResponse(result))
 }
 
@@ -138,9 +175,9 @@ func toUserResponse(user *model.User) *userResponse {
 		role = model.RoleUser
 	}
 	return &userResponse{
-		ID:                 user.ID.Hex(),
-		Name:               user.Name,
-		Email:              user.Email,
+		ID:                  user.ID.Hex(),
+		Name:                user.Name,
+		Email:               user.Email,
 		Role:                role,
 		Phone:               user.Phone,
 		InfinitePayHandle:   user.InfinitePayHandle,
@@ -150,26 +187,41 @@ func toUserResponse(user *model.User) *userResponse {
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var req refreshRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "invalid request body", http.StatusBadRequest)
+	// Preferência: cookie HttpOnly. Fallback ao corpo apenas por compatibilidade.
+	token := ""
+	if c, err := r.Cookie(refreshCookieName); err == nil {
+		token = c.Value
+	}
+	if token == "" {
+		var req refreshRequest
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		token = req.RefreshToken
+	}
+	if token == "" {
+		writeError(w, "missing refresh token", http.StatusUnauthorized)
 		return
 	}
 
-	result, err := h.authService.RefreshToken(r.Context(), req.RefreshToken)
+	result, err := h.authService.RefreshToken(r.Context(), token)
 	if err != nil {
+		h.clearRefreshCookie(w)
 		writeError(w, "invalid refresh token", http.StatusUnauthorized)
 		return
 	}
 
+	h.setRefreshCookie(w, result.RefreshToken)
 	writeJSON(w, http.StatusOK, toAuthResponse(result))
+}
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	h.clearRefreshCookie(w)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func toAuthResponse(result *service.AuthResult) *authResponse {
 	return &authResponse{
-		User:         toUserResponse(result.User),
-		AccessToken:  result.AccessToken,
-		RefreshToken: result.RefreshToken,
+		User:        toUserResponse(result.User),
+		AccessToken: result.AccessToken,
 	}
 }
 

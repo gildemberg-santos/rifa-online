@@ -1,5 +1,5 @@
 import router from "../router"
-import { accessToken, refreshToken, setSession, clearSession } from "./session"
+import { accessToken, setSession, clearSession } from "./session"
 
 const API_URL = import.meta.env.VITE_API_URL || ""
 const BASE_URL = API_URL ? `${API_URL}/api/v1` : "/api/v1"
@@ -25,24 +25,24 @@ function redirectToLogin() {
 }
 
 // Renovação de token com "single-flight": chamadas concorrentes que recebem 401
-// compartilham a mesma tentativa de refresh, evitando múltiplas chamadas a /auth/refresh.
+// compartilham a mesma tentativa de refresh. O refresh token é enviado pelo
+// cookie HttpOnly (credentials: "include"), não pelo corpo.
 let refreshing: Promise<boolean> | null = null
 
 function refreshAccessToken(): Promise<boolean> {
   if (refreshing) return refreshing
 
   refreshing = (async () => {
-    if (!refreshToken.value) return false
     try {
       const res = await fetch(`${BASE_URL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: refreshToken.value }),
+        credentials: "include",
       })
       if (!res.ok) return false
       const data = await res.json()
       if (!data?.accessToken) return false
-      setSession({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user })
+      setSession({ accessToken: data.accessToken, user: data.user })
       return true
     } catch {
       return false
@@ -67,6 +67,7 @@ async function request<T>(method: string, path: string, body?: unknown, retried 
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers,
+    credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   })
 

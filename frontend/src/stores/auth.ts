@@ -2,24 +2,17 @@ import { defineStore } from "pinia"
 import { computed } from "vue"
 import { api } from "../utils/api"
 import router from "../router"
-import {
-  accessToken,
-  refreshToken,
-  currentUser,
-  setSession,
-  clearSession,
-  type SessionUser,
-} from "../utils/session"
+import { accessToken, currentUser, setSession, clearSession, type SessionUser } from "../utils/session"
 
 interface AuthResponse {
   user: SessionUser
   accessToken: string
-  refreshToken: string
 }
 
 export const useAuthStore = defineStore("auth", () => {
   // Refs vindos do módulo de sessão: mantidos em sincronia com o api.ts
-  // (inclusive em renovações silenciosas de token).
+  // (inclusive em renovações silenciosas de token). O refresh token fica
+  // apenas no cookie HttpOnly do backend.
   const user = currentUser
   const isAuthenticated = computed(() => !!accessToken.value)
 
@@ -34,19 +27,20 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function refresh() {
-    if (!refreshToken.value) throw new Error("No refresh token")
-    const res = await api.post<AuthResponse>("/auth/refresh", { refreshToken: refreshToken.value })
+    const res = await api.post<AuthResponse>("/auth/refresh")
     setSession(res)
   }
 
-  function setTokens(access: string, refreshTok: string) {
-    setSession({ accessToken: access, refreshToken: refreshTok })
+  function setTokens(access: string) {
+    setSession({ accessToken: access })
   }
 
   function logout() {
     clearSession()
+    // Invalida o cookie de refresh no servidor (fire-and-forget).
+    api.post("/auth/logout").catch(() => {})
     router.push("/login")
   }
 
-  return { user, accessToken, refreshToken, isAuthenticated, setTokens, register, login, refresh, logout }
+  return { user, accessToken, isAuthenticated, setTokens, register, login, refresh, logout }
 })

@@ -12,7 +12,7 @@ import (
 func TestAuthHandler_Register_InvalidBody(t *testing.T) {
 	cfg := &config.Config{JWTSecret: "test-secret"}
 	authService := service.NewAuthService(nil, cfg)
-	handler := NewAuthHandler(authService)
+	handler := NewAuthHandler(authService, cfg)
 
 	req := makeRequest("POST", "/api/v1/auth/register", `{invalid json}`)
 	resp := httptest.NewRecorder()
@@ -27,7 +27,7 @@ func TestAuthHandler_Register_InvalidBody(t *testing.T) {
 func TestAuthHandler_Login_InvalidBody(t *testing.T) {
 	cfg := &config.Config{JWTSecret: "test-secret"}
 	authService := service.NewAuthService(nil, cfg)
-	handler := NewAuthHandler(authService)
+	handler := NewAuthHandler(authService, cfg)
 
 	req := makeRequest("POST", "/api/v1/auth/login", `{invalid json}`)
 	resp := httptest.NewRecorder()

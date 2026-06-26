@@ -83,7 +83,9 @@ func (h *RaffleHandler) GetDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	detail, err := h.raffleService.GetDetail(r.Context(), oid)
+	userID := middleware.UserIDFromContext(r.Context())
+
+	detail, err := h.raffleService.GetDetail(r.Context(), oid, userID)
 	if err != nil {
 		if errors.Is(err, service.ErrRaffleNotFound) {
 			writeError(w, "raffle not found", http.StatusNotFound)

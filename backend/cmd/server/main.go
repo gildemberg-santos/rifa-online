@@ -91,7 +91,7 @@ func main() {
 	seedDefaultUser(userRepo)
 
 	authService := service.NewAuthService(userRepo, cfg)
-	authHandler := handler.NewAuthHandler(authService)
+	authHandler := handler.NewAuthHandler(authService, cfg)
 
 	webhookURL := cfg.FrontendURL + "/api/v1/webhooks/infinitepay"
 	infiniteClient := infinitepay.NewClient(cfg.InfinitePayHandle, webhookURL, cfg.FrontendURL, cfg.InfinitePayBaseURL)
@@ -134,6 +134,7 @@ func main() {
 				r.Post("/login", authHandler.Login)
 			})
 			r.Post("/refresh", authHandler.Refresh)
+			r.Post("/logout", authHandler.Logout)
 		})
 
 		subMw := middleware.RequiresSubscription(userRepo)

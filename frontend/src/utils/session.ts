@@ -3,6 +3,10 @@ import { ref } from "vue"
 // Estado de sessão reativo e único, compartilhado entre o cliente HTTP (api.ts)
 // e a store de autenticação. Mantém os refs e o localStorage sempre em sincronia,
 // para que uma renovação silenciosa de token reflita na UI (navbar, guards, etc.).
+//
+// O refresh token NÃO é armazenado no cliente: ele vive apenas num cookie HttpOnly
+// gerenciado pelo backend (protegido contra XSS). Aqui guardamos só o access token
+// (curta duração) e os dados do usuário.
 
 export interface SessionUser {
   id: string
@@ -27,20 +31,11 @@ function loadUser(): SessionUser | null {
 }
 
 export const accessToken = ref<string | null>(localStorage.getItem("accessToken"))
-export const refreshToken = ref<string | null>(localStorage.getItem("refreshToken"))
 export const currentUser = ref<SessionUser | null>(loadUser())
 
-export function setSession(data: {
-  accessToken: string
-  refreshToken?: string
-  user?: SessionUser
-}) {
+export function setSession(data: { accessToken: string; user?: SessionUser }) {
   accessToken.value = data.accessToken
   localStorage.setItem("accessToken", data.accessToken)
-  if (data.refreshToken) {
-    refreshToken.value = data.refreshToken
-    localStorage.setItem("refreshToken", data.refreshToken)
-  }
   if (data.user) {
     currentUser.value = data.user
     localStorage.setItem("user", JSON.stringify(data.user))
@@ -49,9 +44,8 @@ export function setSession(data: {
 
 export function clearSession() {
   accessToken.value = null
-  refreshToken.value = null
   currentUser.value = null
   localStorage.removeItem("accessToken")
-  localStorage.removeItem("refreshToken")
+  localStorage.removeItem("refreshToken") // limpeza de versões antigas
   localStorage.removeItem("user")
 }
