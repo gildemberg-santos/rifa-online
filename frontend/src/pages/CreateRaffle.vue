@@ -48,7 +48,12 @@ async function submit() {
     sendEvent("raffle_created", { title: title.value, max_numbers: maxNumbers.value })
     router.push("/dashboard")
   } catch (e: any) {
-    error.value = e.message || "Erro ao criar rifa"
+    const msg = e.message || ""
+    if (msg.includes("subscription is not active")) {
+      error.value = "⚠ Sua assinatura não está ativa. Você precisa de um plano mensal para criar rifas."
+    } else {
+      error.value = msg
+    }
   } finally {
     loading.value = false
   }
@@ -164,7 +169,13 @@ async function submit() {
               <p v-if="drawDate && !isFutureDate" class="text-xs text-red-500 mt-1">A data do sorteio deve ser no futuro</p>
             </div>
 
-            <p v-if="error" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{{ error }}</p>
+            <p v-if="error && !error.includes('assinatura')" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{{ error }}</p>
+            <div v-if="error && error.includes('assinatura')" class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p class="text-sm text-amber-800">{{ error }}</p>
+              <router-link to="/subscription" class="mt-2 inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-800 underline">
+                Ver planos de assinatura →
+              </router-link>
+            </div>
 
             <div class="flex gap-3">
               <router-link
