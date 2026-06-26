@@ -121,47 +121,45 @@ function formatReservedAt(iso: string): string {
 
     <template v-else-if="detail">
       <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 md:p-8 text-white mb-8 shadow-lg">
-        <div class="flex flex-col lg:flex-row lg:items-start gap-4">
-          <div class="flex-1 min-w-0 overflow-hidden">
-            <h1 class="text-2xl md:text-3xl font-extrabold break-words">{{ detail.raffle.title }}</h1>
-            <p class="text-indigo-100 mt-2 break-words" v-if="detail.raffle.description">{{ detail.raffle.description }}</p>
-          </div>
-          <div class="flex flex-wrap gap-2 shrink-0">
-            <div class="bg-white/15 backdrop-blur rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-center min-w-[80px]">
-              <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Preço</p>
-              <p class="text-base md:text-xl font-bold">R$ {{ (detail.raffle.ticketPrice / 100).toFixed(2) }}</p>
-            </div>
-            <div class="bg-white/15 backdrop-blur rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-center min-w-[80px]">
-              <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Sorteio</p>
-              <p class="text-xs md:text-sm font-semibold whitespace-nowrap">{{ new Date(detail.raffle.drawDate).toLocaleDateString("pt-BR") }}</p>
-            </div>
-            <div class="bg-white/15 backdrop-blur rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-center min-w-[80px]">
-              <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Status</p>
-              <p class="text-xs md:text-sm font-semibold whitespace-nowrap" :class="detail.raffle.status === 'ACTIVE' ? 'text-green-300' : 'text-red-300'">
-                {{ detail.raffle.status === "ACTIVE" ? "Ativa" : detail.raffle.status }}
-              </p>
-            </div>
-            <router-link
-              v-if="authStore.isAuthenticated && detail.raffle.status === 'ACTIVE'"
-              :to="`/dashboard/raffles/${detail.raffle.id}/edit`"
-              class="bg-white/20 hover:bg-white/30 backdrop-blur rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-center transition-colors min-w-[80px]"
-            >
-              <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Ações</p>
-              <p class="text-xs md:text-sm font-semibold text-white">Editar</p>
-            </router-link>
+        <div class="min-w-0">
+          <div class="flex items-start gap-3">
+            <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold break-words flex-1 min-w-0">{{ detail.raffle.title }}</h1>
             <button
               @click="shareRaffle"
-              class="bg-white/20 hover:bg-white/30 backdrop-blur rounded-xl px-3 py-2.5 md:px-4 md:py-3 text-center transition-colors cursor-pointer min-w-[80px]"
+              class="shrink-0 bg-white/20 hover:bg-white/30 backdrop-blur rounded-xl p-2.5 md:p-3 transition-colors cursor-pointer"
+              :title="copied ? 'Copiado!' : 'Compartilhar'"
             >
-              <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Compartilhar</p>
-              <p class="text-xs md:text-sm font-semibold text-white flex items-center justify-center gap-1">
-                <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-                {{ copied ? "Copiado!" : "Compartilhar" }}
-              </p>
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
             </button>
           </div>
+          <p class="text-indigo-100 mt-2 break-words" v-if="detail.raffle.description">{{ detail.raffle.description }}</p>
+        </div>
+        <div class="mt-5 flex flex-wrap items-center gap-2 md:gap-3">
+          <div class="bg-white/15 backdrop-blur rounded-xl px-3 py-2 md:px-4 md:py-2.5 text-center">
+            <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Preço</p>
+            <p class="text-sm md:text-lg font-bold">R$ {{ (detail.raffle.ticketPrice / 100).toFixed(2) }}</p>
+          </div>
+          <div class="bg-white/15 backdrop-blur rounded-xl px-3 py-2 md:px-4 md:py-2.5 text-center">
+            <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Sorteio</p>
+            <p class="text-xs md:text-sm font-semibold whitespace-nowrap">{{ new Date(detail.raffle.drawDate).toLocaleDateString("pt-BR") }}</p>
+          </div>
+          <div class="bg-white/15 backdrop-blur rounded-xl px-3 py-2 md:px-4 md:py-2.5 text-center">
+            <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Status</p>
+            <p class="text-xs md:text-sm font-semibold" :class="detail.raffle.status === 'ACTIVE' ? 'text-green-300' : 'text-red-300'">
+              {{ detail.raffle.status === "ACTIVE" ? "Ativa" : detail.raffle.status }}
+            </p>
+          </div>
+          <router-link
+            v-if="authStore.isAuthenticated && detail.raffle.status === 'ACTIVE'"
+            :to="`/dashboard/raffles/${detail.raffle.id}/edit`"
+            class="bg-white/20 hover:bg-white/30 backdrop-blur rounded-xl px-3 py-2 md:px-4 md:py-2.5 text-center transition-colors"
+          >
+            <p class="text-[10px] md:text-xs text-indigo-200 uppercase tracking-wider">Ações</p>
+            <p class="text-xs md:text-sm font-semibold text-white">Editar</p>
+          </router-link>
+          <span v-if="copied" class="text-indigo-200 text-xs md:text-sm animate-pulse shrink-0">Link copiado!</span>
         </div>
       </div>
 
