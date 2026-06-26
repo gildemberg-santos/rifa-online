@@ -82,6 +82,8 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*AuthR
 		return nil, err
 	}
 
+	user.Name = input.Name
+
 	accessToken, err := auth.GenerateAccessToken(user.ID, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, err
