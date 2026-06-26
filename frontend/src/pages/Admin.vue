@@ -515,7 +515,10 @@ function closeModal() {
                   <td class="px-5 py-3 text-gray-700 whitespace-nowrap">R$ {{ (r.revenue / 100).toFixed(2) }}</td>
                   <td class="px-5 py-3 text-gray-500 text-xs whitespace-nowrap">{{ formatDate(r.createdAt) }}</td>
                   <td class="px-5 py-3">
-                    <div class="flex gap-1.5" v-if="r.status === 'ACTIVE'">
+                    <div class="flex gap-1 flex-wrap" v-if="r.status === 'ACTIVE'">
+                      <router-link :to="`/dashboard/raffles/${r.id}/edit`"
+                        class="px-2.5 py-1 text-xs font-medium rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                      >Editar</router-link>
                       <button @click="confirmAction = { id: r.id, action: 'draw', label: 'realizar sorteio' }" :disabled="actionLoading === r.id || r.paidTickets === 0"
                         class="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 transition-colors"
                         :title="r.paidTickets === 0 ? 'Nenhum ingresso pago' : ''"
@@ -524,9 +527,10 @@ function closeModal() {
                         class="px-2.5 py-1 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors"
                       >Cancelar</button>
                     </div>
-                    <span v-else-if="r.status === 'DRAWN'" class="text-xs text-blue-600 font-medium">
-                      Ganhador: {{ r.winnerNumber ?? '-' }}
-                    </span>
+                    <div v-else-if="r.status === 'DRAWN'" class="flex items-center gap-2 text-xs text-blue-600">
+                      <span class="font-medium">Ganhador: {{ r.winnerNumber ?? '-' }}</span>
+                      <router-link :to="`/raffles/${r.id}/result`" class="underline hover:text-blue-800">Ver resultado</router-link>
+                    </div>
                     <span v-else class="text-xs text-gray-400">-</span>
                   </td>
                 </tr>
