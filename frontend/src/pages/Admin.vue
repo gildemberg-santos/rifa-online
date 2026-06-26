@@ -53,7 +53,7 @@ const stats = ref<AdminStats | null>(null)
 const users = ref<AdminUser[]>([])
 const raffles = ref<AdminRaffle[]>([])
 const contactMessages = ref<ContactMessage[]>([])
-const activeTab = ref<"stats" | "users" | "raffles" | "contact">("stats")
+const activeTab = ref<"users" | "raffles" | "contact">("users")
 const loading = ref(true)
 const actionLoading = ref<string | null>(null)
 const selectedUser = ref<AdminUser | null>(null)
@@ -240,30 +240,7 @@ function closeModal() {
   userTickets.value = []
 }
 
-function toggleSort(field: string, type: "user" | "raffle") {
-  if (type === "user") {
-    if (userSort.value === field) {
-      userSortDir.value = userSortDir.value === "asc" ? "desc" : "asc"
-    } else {
-      userSort.value = field as any
-      userSortDir.value = "asc"
-    }
-  } else {
-    if (raffleSort.value === field) {
-      raffleSortDir.value = raffleSortDir.value === "asc" ? "desc" : "asc"
-    } else {
-      raffleSort.value = field as any
-      raffleSortDir.value = "asc"
-    }
-  }
-}
 
-function sortIcon(field: string, type: "user" | "raffle"): string {
-  const current = type === "user" ? userSort.value : raffleSort.value
-  const dir = type === "user" ? userSortDir.value : raffleSortDir.value
-  if (current !== field) return "text-gray-300"
-  return dir === "asc" ? "text-indigo-600" : "text-indigo-600 rotate-180"
-}
 </script>
 
 <template>
@@ -280,134 +257,158 @@ function sortIcon(field: string, type: "user" | "raffle"): string {
     </div>
 
     <template v-else>
-      <div v-if="stats" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">Usuários</p>
-          <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.totalUsers }}</p>
-          <p class="text-xs text-green-600 mt-1">{{ stats.activeUsers }} ativos</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">Assinantes</p>
-          <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.activeUsers }}</p>
-          <p class="text-xs text-amber-600 mt-1">{{ stats.trialUsers }} em trial</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">Vencidos</p>
-          <p class="text-2xl font-bold text-red-600 mt-1">{{ stats.pastDueUsers }}</p>
-          <p class="text-xs text-gray-500 mt-1">past due</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">Rifas</p>
-          <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.totalRaffles }}</p>
-          <p class="text-xs text-indigo-600 mt-1">{{ stats.activeRaffles }} ativas</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">Ingressos</p>
-          <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.totalPaidTickets }}</p>
-          <p class="text-xs text-gray-500 mt-1">pagos</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">Receita</p>
-          <p class="text-2xl font-bold text-gray-900 mt-1">R$ {{ (stats.totalRevenue / 100).toFixed(2) }}</p>
-          <p class="text-xs text-gray-500 mt-1">total</p>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <div class="flex border-b border-gray-200">
-          <button @click="activeTab = 'stats'"
-            class="px-5 py-3 text-sm font-medium transition-colors"
-            :class="activeTab === 'stats' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'"
-          >Resumo</button>
-          <button @click="activeTab = 'users'"
-            class="px-5 py-3 text-sm font-medium transition-colors"
-            :class="activeTab === 'users' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'"
-          >Usuários ({{ users.length }})</button>
-          <button @click="activeTab = 'raffles'"
-            class="px-5 py-3 text-sm font-medium transition-colors"
-            :class="activeTab === 'raffles' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'"
-          >Rifas ({{ raffles.length }})</button>
-          <button @click="activeTab = 'contact'"
-            class="px-5 py-3 text-sm font-medium transition-colors"
-            :class="activeTab === 'contact' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'"
-          >Mensagens ({{ contactMessages.length }})</button>
-        </div>
-
-        <div v-if="activeTab === 'stats'" class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Distribuição de Usuários</h3>
-              <div class="space-y-3" v-if="stats">
-                <div>
-                  <div class="flex justify-between text-sm mb-1">
-                    <span class="text-gray-600">Ativos</span>
-                    <span class="font-semibold text-gray-900">{{ stats.activeUsers }}</span>
-                  </div>
-                  <div class="w-full bg-gray-100 rounded-full h-2">
-                    <div class="bg-green-500 h-2 rounded-full" :style="{ width: stats.totalUsers > 0 ? (stats.activeUsers / stats.totalUsers * 100) + '%' : '0%' }"></div>
-                  </div>
-                </div>
-                <div>
-                  <div class="flex justify-between text-sm mb-1">
-                    <span class="text-gray-600">Trial</span>
-                    <span class="font-semibold text-amber-600">{{ stats.trialUsers }}</span>
-                  </div>
-                  <div class="w-full bg-gray-100 rounded-full h-2">
-                    <div class="bg-amber-500 h-2 rounded-full" :style="{ width: stats.totalUsers > 0 ? (stats.trialUsers / stats.totalUsers * 100) + '%' : '0%' }"></div>
-                  </div>
-                </div>
-                <div>
-                  <div class="flex justify-between text-sm mb-1">
-                    <span class="text-gray-600">Vencidos</span>
-                    <span class="font-semibold text-red-600">{{ stats.pastDueUsers }}</span>
-                  </div>
-                  <div class="w-full bg-gray-100 rounded-full h-2">
-                    <div class="bg-red-500 h-2 rounded-full" :style="{ width: stats.totalUsers > 0 ? (stats.pastDueUsers / stats.totalUsers * 100) + '%' : '0%' }"></div>
-                  </div>
-                </div>
-              </div>
+      <div v-if="stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
+        <div class="bg-white rounded-xl border border-gray-200 p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer" @click="activeTab = 'users'">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg>
             </div>
-            <div>
-              <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Distribuição de Rifas</h3>
-              <div class="space-y-3" v-if="stats">
-                <div>
-                  <div class="flex justify-between text-sm mb-1">
-                    <span class="text-gray-600">Ativas</span>
-                    <span class="font-semibold text-indigo-600">{{ stats.activeRaffles }}</span>
-                  </div>
-                  <div class="w-full bg-gray-100 rounded-full h-2">
-                    <div class="bg-indigo-500 h-2 rounded-full" :style="{ width: stats.totalRaffles > 0 ? (stats.activeRaffles / stats.totalRaffles * 100) + '%' : '0%' }"></div>
-                  </div>
-                </div>
-              </div>
+            <div class="min-w-0">
+              <p class="text-xs text-gray-500 uppercase font-medium truncate">Usuários</p>
+              <p class="text-lg font-bold text-gray-900">{{ stats.totalUsers }}</p>
+              <p class="text-[11px] text-green-600">{{ stats.activeUsers }} ativos</p>
             </div>
           </div>
         </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer" @click="activeTab = 'users'">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-medium">Trial</p>
+              <p class="text-lg font-bold text-amber-600">{{ stats.trialUsers }}</p>
+              <p class="text-[11px] text-gray-500">{{ stats.pastDueUsers }} vencidos</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer" @click="activeTab = 'raffles'">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-medium">Rifas</p>
+              <p class="text-lg font-bold text-gray-900">{{ stats.totalRaffles }}</p>
+              <p class="text-[11px] text-indigo-600">{{ stats.activeRaffles }} ativas</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-3 md:p-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-medium">Ingressos</p>
+              <p class="text-lg font-bold text-gray-900">{{ stats.totalPaidTickets }}</p>
+              <p class="text-[11px] text-gray-500">pagos</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-3 md:p-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-medium">Receita</p>
+              <p class="text-lg font-bold text-gray-900">R$ {{ (stats.totalRevenue / 100).toFixed(2) }}</p>
+              <p class="text-[11px] text-gray-500">total</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-3 md:p-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-rose-100 rounded-lg flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-medium">Inativos</p>
+              <p class="text-lg font-bold text-gray-900">{{ stats.totalUsers - stats.activeUsers }}</p>
+              <p class="text-[11px] text-gray-500">sem assinatura</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      <div class="border-b border-gray-200 mb-6">
+        <nav class="flex gap-1" role="tablist">
+          <button @click="activeTab = 'users'" role="tab"
+            class="px-5 py-3 text-sm font-medium rounded-t-lg transition-all"
+            :class="activeTab === 'users'
+              ? 'text-indigo-700 bg-white border border-b-0 border-gray-200 -mb-px shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+          >
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg>
+              Usuários
+              <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{{ users.length }}</span>
+            </div>
+          </button>
+          <button @click="activeTab = 'raffles'" role="tab"
+            class="px-5 py-3 text-sm font-medium rounded-t-lg transition-all"
+            :class="activeTab === 'raffles'
+              ? 'text-indigo-700 bg-white border border-b-0 border-gray-200 -mb-px shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+          >
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              Rifas
+              <span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{{ raffles.length }}</span>
+            </div>
+          </button>
+          <button @click="activeTab = 'contact'" role="tab"
+            class="px-5 py-3 text-sm font-medium rounded-t-lg transition-all"
+            :class="activeTab === 'contact'
+              ? 'text-indigo-700 bg-white border border-b-0 border-gray-200 -mb-px shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+          >
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+              Mensagens
+              <span v-if="contactMessages.length" class="text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">{{ contactMessages.length }}</span>
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200">
         <div v-if="activeTab === 'users'">
-          <div class="p-4 border-b border-gray-100">
+          <div class="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
             <input v-model="searchQuery" type="text" placeholder="Buscar por nome, email ou telefone..."
-              class="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+              class="w-full sm:max-w-xs px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+            <div class="flex gap-2 flex-wrap">
+              <button @click="searchQuery = ''; userSort = 'createdAt'; userSortDir = 'desc'"
+                class="px-3 py-2 text-xs font-medium text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+              >Limpar filtros</button>
+            </div>
+            <div class="sm:ml-auto flex items-center gap-2 text-xs text-gray-500">
+              <span>Ordenar:</span>
+              <select v-model="userSort" class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none">
+                <option value="createdAt">Registro</option>
+                <option value="name">Nome</option>
+                <option value="email">Email</option>
+                <option value="subscriptionStatus">Assinatura</option>
+              </select>
+              <button @click="userSortDir = userSortDir === 'asc' ? 'desc' : 'asc'" class="p-1 hover:bg-gray-100 rounded" :title="userSortDir === 'asc' ? 'Crescente' : 'Decrescente'">
+                <svg class="w-4 h-4 text-gray-400" :class="userSortDir === 'desc' ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="text-left px-5 py-3 font-semibold text-gray-600 cursor-pointer select-none" @click="toggleSort('name', 'user')">
-                    Nome <span class="inline-block text-xs transition-transform" :class="sortIcon('name', 'user')">▲</span>
-                  </th>
-                  <th class="text-left px-5 py-3 font-semibold text-gray-600 cursor-pointer select-none" @click="toggleSort('email', 'user')">
-                    Email <span class="inline-block text-xs transition-transform" :class="sortIcon('email', 'user')">▲</span>
-                  </th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Nome</th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Email</th>
                   <th class="text-left px-5 py-3 font-semibold text-gray-600">Telefone</th>
                   <th class="text-left px-5 py-3 font-semibold text-gray-600">Tipo</th>
-                  <th class="text-left px-5 py-3 font-semibold text-gray-600 cursor-pointer select-none" @click="toggleSort('subscriptionStatus', 'user')">
-                    Assinatura <span class="inline-block text-xs transition-transform" :class="sortIcon('subscriptionStatus', 'user')">▲</span>
-                  </th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Assinatura</th>
                   <th class="text-left px-5 py-3 font-semibold text-gray-600">Expira</th>
-                  <th class="text-left px-5 py-3 font-semibold text-gray-600 cursor-pointer select-none" @click="toggleSort('createdAt', 'user')">
-                    Registro <span class="inline-block text-xs transition-transform" :class="sortIcon('createdAt', 'user')">▲</span>
-                  </th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Registro</th>
                   <th class="text-left px-5 py-3 font-semibold text-gray-600">Ações</th>
                 </tr>
               </thead>
@@ -420,7 +421,7 @@ function sortIcon(field: string, type: "user" | "raffle"): string {
                     <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold" :class="roleColor(u.role)">{{ roleLabel(u.role) }}</span>
                   </td>
                   <td class="px-5 py-3">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold" :class="subColor(u.subscriptionStatus)">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" :class="subColor(u.subscriptionStatus)">
                       {{ subLabel(u.subscriptionStatus) }}
                       <span v-if="u.subscriptionIsTrial" class="text-amber-500">(teste)</span>
                     </span>
@@ -428,7 +429,7 @@ function sortIcon(field: string, type: "user" | "raffle"): string {
                   <td class="px-5 py-3 text-gray-500 text-xs">{{ u.subscriptionExpiresAt ? formatDate(u.subscriptionExpiresAt) : '-' }}</td>
                   <td class="px-5 py-3 text-gray-500 text-xs">{{ formatDate(u.createdAt) }}</td>
                   <td class="px-5 py-3">
-                    <div class="flex gap-1.5 flex-wrap">
+                    <div class="flex gap-1 flex-wrap">
                       <button @click="updateSubscription(u.id, 'activate')" :disabled="actionLoading === u.id"
                         class="px-2.5 py-1 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
                         :class="u.subscriptionStatus === 'ACTIVE' ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-green-50 text-green-600 hover:bg-green-100'"
@@ -456,82 +457,104 @@ function sortIcon(field: string, type: "user" | "raffle"): string {
           </div>
         </div>
 
-        <div v-if="activeTab === 'raffles'" class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="text-left px-5 py-3 font-semibold text-gray-600 cursor-pointer select-none" @click="toggleSort('title', 'raffle')">
-                  Título <span class="inline-block text-xs transition-transform" :class="sortIcon('title', 'raffle')">▲</span>
-                </th>
-                <th class="text-left px-5 py-3 font-semibold text-gray-600 cursor-pointer select-none" @click="toggleSort('organizerName', 'raffle')">
-                  Criador <span class="inline-block text-xs transition-transform" :class="sortIcon('organizerName', 'raffle')">▲</span>
-                </th>
-                <th class="text-left px-5 py-3 font-semibold text-gray-600 cursor-pointer select-none" @click="toggleSort('status', 'raffle')">
-                  Status <span class="inline-block text-xs transition-transform" :class="sortIcon('status', 'raffle')">▲</span>
-                </th>
-                <th class="text-left px-5 py-3 font-semibold text-gray-600">Valor</th>
-                <th class="text-left px-5 py-3 font-semibold text-gray-600 cursor-pointer select-none" @click="toggleSort('soldTickets', 'raffle')">
-                  Vendas <span class="inline-block text-xs transition-transform" :class="sortIcon('soldTickets', 'raffle')">▲</span>
-                </th>
-                <th class="text-left px-5 py-3 font-semibold text-gray-600">Receita</th>
-                <th class="text-left px-5 py-3 font-semibold text-gray-600 cursor-pointer select-none" @click="toggleSort('createdAt', 'raffle')">
-                  Data <span class="inline-block text-xs transition-transform" :class="sortIcon('createdAt', 'raffle')">▲</span>
-                </th>
-                <th class="text-left px-5 py-3 font-semibold text-gray-600">Ações</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-for="r in sortedRaffles" :key="r.id" class="hover:bg-gray-50">
-                <td class="px-5 py-3 font-medium text-gray-900 max-w-[200px] truncate" :title="r.title">{{ r.title }}</td>
-                <td class="px-5 py-3 text-gray-600">{{ r.organizerName }}</td>
-                <td class="px-5 py-3">
-                  <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold" :class="statusColor(r.status)">
-                    {{ statusLabel(r.status) }}
-                  </span>
-                </td>
-                <td class="px-5 py-3 text-gray-700">R$ {{ (r.ticketPrice / 100).toFixed(2) }}</td>
-                <td class="px-5 py-3">
-                  <div class="flex items-center gap-2">
-                    <div class="flex-1 min-w-[80px] bg-gray-100 rounded-full h-2">
-                      <div class="h-2 rounded-full transition-all" :class="r.status === 'ACTIVE' ? 'bg-indigo-500' : r.status === 'DRAWN' ? 'bg-blue-500' : 'bg-gray-300'"
-                        :style="{ width: salesProgress(r) + '%' }"></div>
+        <div v-if="activeTab === 'raffles'">
+          <div class="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
+            <div class="sm:ml-auto flex items-center gap-2 text-xs text-gray-500">
+              <span>Ordenar:</span>
+              <select v-model="raffleSort" class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none">
+                <option value="createdAt">Data</option>
+                <option value="title">Título</option>
+                <option value="organizerName">Criador</option>
+                <option value="status">Status</option>
+                <option value="soldTickets">Vendas</option>
+              </select>
+              <button @click="raffleSortDir = raffleSortDir === 'asc' ? 'desc' : 'asc'" class="p-1 hover:bg-gray-100 rounded" :title="raffleSortDir === 'asc' ? 'Crescente' : 'Decrescente'">
+                <svg class="w-4 h-4 text-gray-400" :class="raffleSortDir === 'desc' ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Título</th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Criador</th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Status</th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Valor</th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Vendas</th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Receita</th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Data</th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Ações</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="r in sortedRaffles" :key="r.id" class="hover:bg-gray-50">
+                  <td class="px-5 py-3">
+                    <router-link :to="`/raffles/${r.id}`" class="font-medium text-indigo-600 hover:text-indigo-800 hover:underline max-w-[200px] truncate block" :title="r.title">
+                      {{ r.title }}
+                    </router-link>
+                  </td>
+                  <td class="px-5 py-3 text-gray-600 whitespace-nowrap">{{ r.organizerName }}</td>
+                  <td class="px-5 py-3">
+                    <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold" :class="statusColor(r.status)">
+                      {{ statusLabel(r.status) }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-3 text-gray-700 whitespace-nowrap">R$ {{ (r.ticketPrice / 100).toFixed(2) }}</td>
+                  <td class="px-5 py-3 min-w-[140px]">
+                    <div class="flex items-center gap-2">
+                      <div class="flex-1 min-w-[60px] bg-gray-100 rounded-full h-2">
+                        <div class="h-2 rounded-full transition-all" :class="r.status === 'ACTIVE' ? 'bg-indigo-500' : r.status === 'DRAWN' ? 'bg-blue-500' : 'bg-gray-300'"
+                          :style="{ width: salesProgress(r) + '%' }"></div>
+                      </div>
+                      <span class="text-xs text-gray-600 whitespace-nowrap">{{ r.paidTickets }}/{{ r.maxNumbers }}</span>
                     </div>
-                    <span class="text-xs text-gray-600 whitespace-nowrap">{{ r.paidTickets }}/{{ r.maxNumbers }}</span>
-                  </div>
-                </td>
-                <td class="px-5 py-3 text-gray-700">R$ {{ (r.revenue / 100).toFixed(2) }}</td>
-                <td class="px-5 py-3 text-gray-500 text-xs">{{ formatDate(r.createdAt) }}</td>
-                <td class="px-5 py-3">
-                  <div class="flex gap-1.5" v-if="r.status === 'ACTIVE'">
-                    <button @click="confirmAction = { id: r.id, action: 'draw', label: 'realizar sorteio' }" :disabled="actionLoading === r.id"
-                      class="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition-colors"
-                      :title="r.paidTickets === 0 ? 'Nenhum ingresso pago' : ''"
-                    >Sortear</button>
-                    <button @click="confirmAction = { id: r.id, action: 'cancel', label: 'cancelar' }" :disabled="actionLoading === r.id"
-                      class="px-2.5 py-1 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors"
-                    >Cancelar</button>
-                  </div>
-                  <span v-else-if="r.status === 'DRAWN'" class="text-xs text-blue-600 font-medium">
-                    Ganhador: {{ r.winnerNumber ?? '-' }}
-                  </span>
-                  <span v-else class="text-xs text-gray-400">-</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-if="raffles.length === 0" class="text-center py-8 text-gray-500">Nenhuma rifa encontrada</p>
+                  </td>
+                  <td class="px-5 py-3 text-gray-700 whitespace-nowrap">R$ {{ (r.revenue / 100).toFixed(2) }}</td>
+                  <td class="px-5 py-3 text-gray-500 text-xs whitespace-nowrap">{{ formatDate(r.createdAt) }}</td>
+                  <td class="px-5 py-3">
+                    <div class="flex gap-1.5" v-if="r.status === 'ACTIVE'">
+                      <button @click="confirmAction = { id: r.id, action: 'draw', label: 'realizar sorteio' }" :disabled="actionLoading === r.id || r.paidTickets === 0"
+                        class="px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-40 transition-colors"
+                        :title="r.paidTickets === 0 ? 'Nenhum ingresso pago' : ''"
+                      >Sortear</button>
+                      <button @click="confirmAction = { id: r.id, action: 'cancel', label: 'cancelar' }" :disabled="actionLoading === r.id"
+                        class="px-2.5 py-1 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors"
+                      >Cancelar</button>
+                    </div>
+                    <span v-else-if="r.status === 'DRAWN'" class="text-xs text-blue-600 font-medium">
+                      Ganhador: {{ r.winnerNumber ?? '-' }}
+                    </span>
+                    <span v-else class="text-xs text-gray-400">-</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="raffles.length === 0" class="text-center py-8 text-gray-500">Nenhuma rifa encontrada</p>
+          </div>
         </div>
 
-        <div v-if="activeTab === 'contact'" class="p-6 space-y-4">
-          <div v-for="m in contactMessages" :key="m.id" class="border border-gray-200 rounded-xl p-4">
-            <div class="flex items-center justify-between gap-2 mb-1">
-              <span class="font-semibold text-gray-900">{{ m.name }}</span>
-              <span class="text-xs text-gray-400">{{ new Date(m.createdAt).toLocaleString("pt-BR") }}</span>
+        <div v-if="activeTab === 'contact'" class="divide-y divide-gray-100">
+          <div v-for="m in contactMessages" :key="m.id" class="p-5 hover:bg-gray-50 transition-colors">
+            <div class="flex items-start justify-between gap-4 mb-2">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  {{ (m.name || 'A').charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <p class="font-semibold text-gray-900">{{ m.name }}</p>
+                  <p class="text-sm text-indigo-600">{{ m.contact }}</p>
+                </div>
+              </div>
+              <span class="text-xs text-gray-400 shrink-0">{{ new Date(m.createdAt).toLocaleString("pt-BR") }}</span>
             </div>
-            <p v-if="m.contact" class="text-sm text-indigo-600 mb-2">{{ m.contact }}</p>
-            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ m.message }}</p>
+            <div class="ml-12">
+              <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ m.message }}</p>
+            </div>
           </div>
-          <p v-if="contactMessages.length === 0" class="text-center py-8 text-gray-500">Nenhuma mensagem recebida</p>
+          <p v-if="contactMessages.length === 0" class="text-center py-12 text-gray-400">Nenhuma mensagem recebida</p>
         </div>
       </div>
     </template>
