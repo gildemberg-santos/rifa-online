@@ -39,10 +39,10 @@ onMounted(async () => {
       <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ detail.raffle.title }}</h1>
 
       <div v-if="detail.raffle.status === 'DRAWN' && detail.raffle.winnerNumber">
-        <div class="w-32 h-32 mx-auto bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-xl mb-4 animate-scale-in">
-          <span class="text-5xl font-extrabold text-white">{{ detail.raffle.winnerNumber }}</span>
+        <div class="w-28 h-28 sm:w-36 sm:h-36 mx-auto bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-xl mb-4 animate-bounce-in">
+          <span class="text-3xl sm:text-5xl font-extrabold text-white drop-shadow-lg">{{ detail.raffle.winnerNumber }}</span>
         </div>
-        <p class="text-lg text-gray-600">Número vencedor!</p>
+        <p class="text-base sm:text-lg text-gray-600">Número vencedor!</p>
       </div>
 
       <div v-else class="py-8">

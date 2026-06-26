@@ -75,18 +75,18 @@ async function submit() {
         </div>
       </div>
 
-      <div v-if="stats" class="grid grid-cols-3 gap-4 mb-8">
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">Ingressos Vendidos</p>
-          <p class="text-xl font-bold text-gray-900 mt-1">{{ stats.totalSold }}</p>
+      <div v-if="stats" class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-8">
+        <div class="bg-gradient-to-br from-indigo-50 to-white rounded-xl border border-indigo-100 p-4">
+          <p class="text-xs text-indigo-500 uppercase tracking-wider font-medium">Ingressos Vendidos</p>
+          <p class="text-2xl font-bold text-indigo-700 mt-1">{{ stats.totalSold }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">Receita</p>
-          <p class="text-xl font-bold text-gray-900 mt-1">R$ {{ (stats.totalRevenue / 100).toFixed(2) }}</p>
+        <div class="bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-100 p-4">
+          <p class="text-xs text-emerald-500 uppercase tracking-wider font-medium">Receita</p>
+          <p class="text-2xl font-bold text-emerald-700 mt-1">R$ {{ (stats.totalRevenue / 100).toFixed(2) }}</p>
         </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">Vendidos</p>
-          <p class="text-xl font-bold text-gray-900 mt-1">{{ stats.percentageSold }}%</p>
+        <div class="bg-gradient-to-br from-amber-50 to-white rounded-xl border border-amber-100 p-4">
+          <p class="text-xs text-amber-500 uppercase tracking-wider font-medium">Vendidos</p>
+          <p class="text-2xl font-bold text-amber-700 mt-1">{{ stats.percentageSold }}%</p>
         </div>
       </div>
 

@@ -91,12 +91,12 @@ const canCreateCheckout = computed(() =>
 <template>
   <div class="max-w-lg mx-auto px-4 py-12 animate-fade-in">
     <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg mb-4">
-        <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <div class="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl sm:rounded-2xl shadow-lg mb-4">
+        <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
       </div>
-      <h1 class="text-2xl font-bold text-gray-900">Assinatura</h1>
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Assinatura</h1>
       <p class="text-gray-500 text-sm mt-1">Gerencie sua assinatura mensal</p>
     </div>
 

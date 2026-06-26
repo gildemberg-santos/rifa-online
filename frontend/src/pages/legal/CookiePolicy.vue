@@ -16,7 +16,7 @@ import LegalLayout from "../../components/LegalLayout.vue"
     </p>
 
     <h2>2. Cookies e armazenamento que utilizamos</h2>
-    <table>
+    <div class="table-wrap"><table>
       <thead>
         <tr><th>Tipo</th><th>Finalidade</th><th>Exemplo</th></tr>
       </thead>
@@ -25,7 +25,7 @@ import LegalLayout from "../../components/LegalLayout.vue"
         <tr><td>Funcionais</td><td>Lembrar preferências do usuário</td><td>Dados de perfil em cache</td></tr>
         <tr><td>Analíticos (se ativados)</td><td>Entender o uso da Plataforma de forma agregada</td><td>Ferramentas de analytics</td></tr>
       </tbody>
-    </table>
+    </table></div>
     <p>
       Os cookies estritamente necessários são essenciais ao funcionamento e não podem ser desativados sem
       comprometer o uso da Plataforma.

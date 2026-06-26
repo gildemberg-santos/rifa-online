@@ -1,3 +1,5 @@
+import router from "../router"
+
 const API_URL = import.meta.env.VITE_API_URL || ""
 const BASE_URL = API_URL ? `${API_URL}/api/v1` : "/api/v1"
 
@@ -10,7 +12,58 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+function isAuthEndpoint(path: string): boolean {
+  return path.startsWith("/auth/")
+}
+
+function clearSession() {
+  localStorage.removeItem("accessToken")
+  localStorage.removeItem("refreshToken")
+  localStorage.removeItem("user")
+}
+
+function redirectToLogin() {
+  clearSession()
+  const current = router.currentRoute.value
+  if (current.name === "login") return
+  router.push({ name: "login", query: { redirect: current.fullPath } })
+}
+
+// Renovação de token com "single-flight": chamadas concorrentes que recebem 401
+// compartilham a mesma tentativa de refresh, evitando múltiplas chamadas a /auth/refresh.
+let refreshing: Promise<boolean> | null = null
+
+function refreshAccessToken(): Promise<boolean> {
+  if (refreshing) return refreshing
+
+  refreshing = (async () => {
+    const refreshToken = localStorage.getItem("refreshToken")
+    if (!refreshToken) return false
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      })
+      if (!res.ok) return false
+      const data = await res.json()
+      if (!data?.accessToken) return false
+      localStorage.setItem("accessToken", data.accessToken)
+      if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken)
+      if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
+      return true
+    } catch {
+      return false
+    }
+  })()
+
+  refreshing.finally(() => {
+    refreshing = null
+  })
+  return refreshing
+}
+
+async function request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   }
@@ -25,6 +78,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     headers,
     body: body ? JSON.stringify(body) : undefined,
   })
+
+  // Token expirado/inválido: tenta renovar uma vez; se não conseguir, vai para o login.
+  if (res.status === 401 && !isAuthEndpoint(path)) {
+    if (!retried && (await refreshAccessToken())) {
+      return request<T>(method, path, body, true)
+    }
+    redirectToLogin()
+    throw new ApiError(401, "Sessão expirada. Faça login novamente.")
+  }
 
   if (!res.ok) {
     throw new ApiError(res.status, `Request failed (${res.status})`)

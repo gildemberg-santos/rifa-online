@@ -14,11 +14,11 @@ defineProps<{
         </svg>
         Voltar ao início
       </router-link>
-      <h1 class="text-3xl font-bold text-gray-900 mt-4">{{ title }}</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mt-4">{{ title }}</h1>
       <p class="text-sm text-gray-500 mt-2">Última atualização: {{ updatedAt }}</p>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-10 legal-prose">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-10 legal-prose">
       <slot />
     </div>
 
@@ -73,11 +73,16 @@ defineProps<{
   color: #4f46e5;
   text-decoration: underline;
 }
+.legal-prose :deep(.table-wrap) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
 .legal-prose :deep(table) {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  min-width: 480px;
 }
 .legal-prose :deep(th),
 .legal-prose :deep(td) {

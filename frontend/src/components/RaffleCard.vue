@@ -35,14 +35,14 @@ function share(e: Event) {
     :to="`/raffles/${raffle.id}`"
     class="group block bg-white rounded-2xl shadow-sm border border-gray-200/80 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
   >
-    <div v-if="raffle.imageUrl" class="h-44 bg-gray-100 overflow-hidden">
+    <div v-if="raffle.imageUrl" class="h-36 sm:h-44 bg-gray-100 overflow-hidden">
       <img
         :src="raffle.imageUrl"
         :alt="raffle.title"
         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
       />
     </div>
-    <div v-else class="h-44 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center relative overflow-hidden">
+    <div v-else class="h-36 sm:h-44 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center relative overflow-hidden">
       <div class="absolute inset-0 bg-white/10"></div>
       <span class="text-5xl text-white font-extrabold drop-shadow-lg">{{ raffle.title.charAt(0).toUpperCase() }}</span>
     </div>

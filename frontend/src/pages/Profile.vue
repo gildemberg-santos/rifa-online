@@ -137,11 +137,11 @@ function subscriptionColor(status: string): string {
     <div v-else class="space-y-6">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
         <div class="flex items-center gap-4 mb-6">
-          <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-md">
+          <div class="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white text-lg sm:text-xl font-bold shadow-md shrink-0">
             {{ (user?.name || "U").charAt(0).toUpperCase() }}
           </div>
           <div>
-            <h1 class="text-2xl font-bold text-gray-900">Meu Perfil</h1>
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Meu Perfil</h1>
             <p class="text-sm text-gray-500">Gerencie seus dados</p>
           </div>
         </div>

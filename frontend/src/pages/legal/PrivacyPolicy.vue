@@ -24,7 +24,7 @@ import LegalLayout from "../../components/LegalLayout.vue"
     </ul>
 
     <h2>2. Dados que coletamos</h2>
-    <table>
+    <div class="table-wrap"><table>
       <thead>
         <tr><th>Categoria</th><th>Dados</th><th>Origem</th></tr>
       </thead>
@@ -34,14 +34,14 @@ import LegalLayout from "../../components/LegalLayout.vue"
         <tr><td>Participantes</td><td>Nome e telefone do comprador, números adquiridos</td><td>Fornecidos no checkout</td></tr>
         <tr><td>Técnicos</td><td>Endereço IP, data/hora de acesso, registros de uso, cookies</td><td>Coleta automática</td></tr>
       </tbody>
-    </table>
+    </table></div>
     <p>
       <strong>Não coletamos nem armazenamos dados de cartão de crédito.</strong> O pagamento é processado
       diretamente pela InfinitePay.
     </p>
 
     <h2>3. Finalidades e bases legais</h2>
-    <table>
+    <div class="table-wrap"><table>
       <thead>
         <tr><th>Finalidade</th><th>Base legal (art. 7º LGPD)</th></tr>
       </thead>
@@ -53,7 +53,7 @@ import LegalLayout from "../../components/LegalLayout.vue"
         <tr><td>Comunicações sobre o serviço</td><td>Execução de contrato / legítimo interesse</td></tr>
         <tr><td>Comunicações de marketing</td><td>Consentimento (I)</td></tr>
       </tbody>
-    </table>
+    </table></div>
 
     <h2>4. Compartilhamento de dados</h2>
     <p>Podemos compartilhar dados com:</p>
