@@ -41,6 +41,7 @@ const fetching = ref(true)
 const message = ref("")
 const isError = ref(false)
 const handleMessage = ref("")
+const handleError = ref(false)
 const handleLoading = ref(false)
 
 onMounted(async () => {
@@ -90,6 +91,7 @@ async function submit() {
 async function saveHandle() {
   handleLoading.value = true
   handleMessage.value = ""
+  handleError.value = false
 
   try {
     const result = await api.put<{ infinitePayHandle: string }>("/me/infinite-pay-handle", {
@@ -99,7 +101,7 @@ async function saveHandle() {
     handleMessage.value = "Conta InfinitePay conectada com sucesso"
   } catch {
     handleMessage.value = "Erro ao salvar conta InfinitePay"
-    isError.value = true
+    handleError.value = true
   } finally {
     handleLoading.value = false
   }
@@ -233,6 +235,19 @@ function subscriptionColor(status: string): string {
           Conecte sua conta InfinitePay para receber os pagamentos das rifas diretamente.
         </p>
 
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm text-blue-900 space-y-2">
+          <p class="font-semibold">Onde encontrar seu handle no app InfinitePay:</p>
+          <ol class="list-decimal list-inside space-y-1 text-blue-800">
+            <li>Abra o aplicativo da <strong>InfinitePay</strong> no seu celular</li>
+            <li>Toque no <strong>menu</strong> (ícone de engrenagem ou seu avatar)</li>
+            <li>Procure por <strong>"InfiniteTag"</strong> ou <strong>"Meu perfil"</strong></li>
+            <li>O handle é o nome de usuário que aparece com <strong>$</strong> na frente (ex: <em>$fulano</em>)</li>
+          </ol>
+          <p class="text-blue-700 mt-1">
+            <strong>Importante:</strong> informe apenas o nome, <strong>sem o $</strong> (ex: <em>fulano</em>).
+          </p>
+        </div>
+
         <form @submit.prevent="saveHandle" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Handle InfinitePay</label>
@@ -240,15 +255,16 @@ function subscriptionColor(status: string): string {
               v-model="infinitePayHandle"
               type="text"
               maxlength="100"
-              placeholder="Seu handle (ex: usuario123)"
+              placeholder="Seu handle (ex: fulano)"
               class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
             />
+            <p class="text-xs text-gray-400 mt-1">É a sua InfiniteTag no app da InfinitePay</p>
           </div>
 
           <p
             v-if="handleMessage"
             class="text-sm px-3 py-2 rounded-lg"
-            :class="isError ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'"
+            :class="handleError ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'"
           >
             {{ handleMessage }}
           </p>
