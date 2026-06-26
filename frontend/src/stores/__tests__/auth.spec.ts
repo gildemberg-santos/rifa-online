@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { setActivePinia, createPinia } from "pinia"
 import { useAuthStore } from "../auth"
 
@@ -33,9 +33,14 @@ describe("AuthStore", () => {
     expect(localStorage.getItem("accessToken")).toBeNull()
   })
 
-  it("reads the access token from localStorage on init", () => {
+  it("hydrates the access token from localStorage on boot", async () => {
+    // O módulo de sessão hidrata na carga; resetModules força reimportar
+    // após gravar o token, simulando o boot da aplicação.
     localStorage.setItem("accessToken", "stored-token")
-    const store = useAuthStore()
+    vi.resetModules()
+    const { useAuthStore: freshUseAuthStore } = await import("../auth")
+    setActivePinia(createPinia())
+    const store = freshUseAuthStore()
     expect(store.accessToken).toBe("stored-token")
     expect(store.isAuthenticated).toBe(true)
   })
