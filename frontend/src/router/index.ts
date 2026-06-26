@@ -1,8 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router"
-import Home from "../pages/Home.vue"
 
 const titles: Record<string, string> = {
-  home: "Rifa Online - Plataforma de Rifas Online",
   "raffle-detail": "Detalhes da Rifa - Rifa Online",
   checkout: "Finalizar Compra - Rifa Online",
   "raffle-result": "Resultado do Sorteio - Rifa Online",
@@ -31,9 +29,7 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      name: "home",
-      component: Home,
-      meta: { requiresAuth: true },
+      redirect: "/dashboard",
     },
     {
       path: "/raffles/:id",
