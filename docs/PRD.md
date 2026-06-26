@@ -2,106 +2,130 @@
 
 ## 1. Visão Geral
 
-Sistema web para gerenciamento de rifas online com pagamento via AbacatePay. Permite que organizadores criem rifas, vendam números e gerenciem sorteios, e que participantes comprem números e acompanhem resultados.
+Sistema web (SaaS) para gerenciamento de rifas online com pagamento via **InfinitePay**. Organizadores assinam o serviço para criar rifas, vender números e gerenciar sorteios; participantes compram números (sem necessidade de conta) e acompanham resultados. Há um painel administrativo para operação da plataforma.
 
-## 2. Objetivos
+## 2. Modelo de Negócio (SaaS)
 
-- Facilitar a criação e gestão de rifas por qualquer pessoa
-- Processar pagamentos de forma segura via PIX/cartão (AbacatePay)
-- Automatizar a marcação de números pagos
+- Organizadores pagam **assinatura mensal de R$ 10,00** (via InfinitePay) para usar a plataforma.
+- **Trial de 7 dias** ao criar a conta — durante o trial o organizador já pode criar e gerenciar rifas.
+- Sem assinatura ativa (ou trial expirado), a criação/gestão de rifas é bloqueada.
+- **Admin** ignora a verificação de assinatura (bypass).
+
+## 3. Objetivos
+
+- Facilitar a criação e gestão de rifas por qualquer organizador assinante
+- Processar pagamentos de forma segura via PIX/cartão (InfinitePay)
+- Automatizar a marcação de números pagos via webhook + confirmação
 - Sortear números aleatórios e divulgar resultados
-- Dashboard administrativo com relatórios básicos
+- Dashboard com relatórios e estatísticas
+- Monetizar via assinatura mensal recorrente
 
-## 3. Personas
+## 4. Personas
 
 | Persona | Descrição |
 |---------|-----------|
-| **Organizador** | Cria e gerencia rifas, visualiza vendas, realiza sorteios |
-| **Participante** | Compra números, acompanha rifas, vê resultados |
+| **Organizador** | Assina o serviço, cria e gerencia rifas, visualiza vendas, realiza sorteios |
+| **Participante** | Compra números (sem conta), acompanha rifas, vê resultados e suas compras |
+| **Admin** | Opera a plataforma: gerencia usuários, assinaturas, rifas e vê estatísticas globais |
 
-## 4. Funcionalidades (MVP)
+## 5. Funcionalidades
 
-### 4.1 Módulo de Autenticação
-
-| ID | Funcionalidade | Prioridade |
-|----|---------------|------------|
-| F-01 | Cadastro de organizador (email + senha) | Alta |
-| F-02 | Login com JWT | Alta |
-| F-03 | Recuperação de senha | Média |
-
-### 4.2 Módulo de Rifas
+### 5.1 Autenticação
 
 | ID | Funcionalidade | Prioridade |
 |----|---------------|------------|
-| F-04 | Criar rifa (título, descrição, valor do número, data do sorteio, quantidade de números, imagem) | Alta |
-| F-05 | Listar rifas públicas (com filtro por status) | Alta |
-| F-06 | Visualizar detalhes de uma rifa (números disponíveis/ocupados) | Alta |
-| F-07 | Editar rifa (antes do sorteio) | Média |
-| F-08 | Cancelar rifa | Média |
+| F-01 | Cadastro de organizador (nome, email, senha) com trial de 7 dias | Alta |
+| F-02 | Login com JWT (access + refresh) | Alta |
+| F-03 | Refresh de token | Alta |
+| F-04 | Perfil do usuário (nome, telefone, handle InfinitePay) | Alta |
 
-### 4.3 Módulo de Compra (Participante)
-
-| ID | Funcionalidade | Prioridade |
-|----|---------------|------------|
-| F-09 | Selecionar números disponíveis em uma rifa | Alta |
-| F-10 | Checkout via AbacatePay (PIX / Cartão) | Alta |
-| F-11 | Webhook para confirmação automática de pagamento | Alta |
-| F-12 | Visualizar meus números comprados | Alta |
-
-### 4.4 Módulo de Sorteio
+### 5.2 Assinatura (SaaS)
 
 | ID | Funcionalidade | Prioridade |
 |----|---------------|------------|
-| F-13 | Sortear vencedor (automático na data agendada ou manual) | Alta |
-| F-14 | Registrar resultado do sorteio | Alta |
-| F-15 | Notificar vencedor (por email) | Média |
+| F-05 | Checkout de assinatura via InfinitePay (R$10/mês) | Alta |
+| F-06 | Status da assinatura (ACTIVE/INACTIVE/PAST_DUE/CANCELLED, trial, expiração) | Alta |
+| F-07 | Botão de assinar exibido durante o trial | Média |
+| F-08 | Bloqueio de criação de rifa sem assinatura/trial | Alta |
 
-### 4.5 Dashboard
+### 5.3 Rifas
 
 | ID | Funcionalidade | Prioridade |
 |----|---------------|------------|
-| F-16 | Painel do organizador com vendas, rifas ativas, faturamento | Alta |
-| F-17 | Lista de participantes por rifa | Média |
+| F-09 | Criar rifa (título, descrição, valor, data, quantidade, imagem) | Alta |
+| F-10 | Listar rifas públicas | Alta |
+| F-11 | Visualizar detalhes (números disponíveis/reservados/pagos) | Alta |
+| F-12 | Editar rifa (bloqueado se já houver vendas) | Média |
+| F-13 | Cancelar / excluir rifa | Média |
+| F-14 | Compartilhar rifa | Baixa |
+| F-15 | Estatísticas da rifa | Média |
 
-## 5. Fluxo do Usuário (Participante)
+### 5.4 Compra (Participante)
 
-1. Acessa lista de rifas públicas
+| ID | Funcionalidade | Prioridade |
+|----|---------------|------------|
+| F-16 | Selecionar números disponíveis | Alta |
+| F-17 | Checkout via InfinitePay (PIX / Cartão) — informa nome e **telefone** | Alta |
+| F-18 | Webhook + confirmação automática de pagamento | Alta |
+| F-19 | "Minhas compras" — buscar tickets pelo telefone | Alta |
+
+### 5.5 Sorteio
+
+| ID | Funcionalidade | Prioridade |
+|----|---------------|------------|
+| F-20 | Sortear vencedor (manual) | Alta |
+| F-21 | Registrar e divulgar resultado | Alta |
+
+### 5.6 Dashboard & Admin
+
+| ID | Funcionalidade | Prioridade |
+|----|---------------|------------|
+| F-22 | Dashboard do organizador (vendas, rifas, faturamento, gráficos) | Alta |
+| F-23 | Painel admin: usuários, busca, rifas, estatísticas globais | Alta |
+| F-24 | Admin alterar assinatura de um usuário | Média |
+
+## 6. Fluxo do Participante
+
+1. Acessa a lista de rifas públicas
 2. Escolhe uma rifa e visualiza os números
 3. Seleciona um ou mais números
-4. Informa nome e email
-5. É redirecionado ao checkout AbacatePay
+4. Informa **nome e telefone** (o telefone identifica o comprador)
+5. É redirecionado ao checkout InfinitePay
 6. Paga via PIX ou cartão
-7. É redirecionado de volta ao site com confirmação
-8. Recebe confirmação por email (quando implementado)
-9. Acompanha o sorteio na data marcada
+7. Volta ao site; pagamento confirmado por webhook/polling
+8. Acompanha "Minhas compras" pelo telefone e o sorteio na data marcada
 
-## 6. Fluxo do Organizador
+## 7. Fluxo do Organizador
 
-1. Cadastra-se e faz login
-2. Cria rifa (define dados, valor, data)
-3. Acompanha vendas no dashboard
-4. Sorteia o vencedor (manual ou automático)
-5. Divulga o resultado
+1. Cadastra-se (entra em trial de 7 dias) e faz login
+2. (Durante/após o trial) assina o plano via InfinitePay
+3. Configura seu **handle InfinitePay** no perfil (para receber os pagamentos das rifas)
+4. Cria rifa (dados, valor, data)
+5. Acompanha vendas no dashboard
+6. Sorteia o vencedor e divulga o resultado
 
-## 7. Critérios de Sucesso
+## 8. Critérios de Sucesso
 
-- Uma compra é confirmada em < 30s após o pagamento via webhook
-- Organizador consegue criar rifa em < 5 passos
+- Pagamento confirmado em < 30s após o pagamento (webhook + confirmação)
+- Organizador cria rifa em < 5 passos
 - Sistema lida com 1000 participantes simultâneos
 
-## 8. Não-Escopo (MVP)
+## 9. Não-Escopo
 
 - App mobile nativo
 - Split de pagamento entre organizadores
 - Rifas recorrentes
 - Marketplace de rifas
-- Chat entre organizador e participantes
+- Chat organizador ↔ participante
+- Sorteio automático agendado (apenas manual no momento)
 
-## 9. Glossário
+## 10. Glossário
 
 | Termo | Definição |
 |-------|-----------|
 | Rifa | Sorteio onde participantes compram números |
-| Número | Unidade vendável de uma rifa |
-| Checkout | Página de pagamento hospedada pela AbacatePay |
-| Webhook | Notificação HTTP enviada pela AbacatePay sobre eventos de pagamento |
+| Número / Ticket | Unidade vendável de uma rifa |
+| Handle InfinitePay | Identificador (`$tag`) do organizador que recebe os pagamentos |
+| Checkout | Página de pagamento hospedada pela InfinitePay |
+| Webhook | Notificação HTTP enviada pela InfinitePay sobre eventos de pagamento |
+| Trial | Período de 7 dias de uso gratuito após o cadastro |

@@ -41,12 +41,18 @@ const mobileOpen = ref(false)
             <router-link v-if="auth.user?.role === 'ADMIN'" to="/admin" class="px-3 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
               Admin
             </router-link>
+            <router-link to="/ajuda" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+              Ajuda
+            </router-link>
             <div class="w-px h-6 bg-gray-200 mx-2"></div>
             <button @click="auth.logout" class="px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
               Sair
             </button>
           </template>
           <template v-else>
+            <router-link to="/ajuda" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+              Ajuda
+            </router-link>
             <router-link to="/login" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-sm transition-all">
               Entrar
             </router-link>
@@ -71,11 +77,17 @@ const mobileOpen = ref(false)
           <router-link v-if="auth.user?.role === 'ADMIN'" to="/admin" class="block px-3 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 rounded-lg" @click="mobileOpen = false">
             Admin
           </router-link>
+          <router-link to="/ajuda" class="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" @click="mobileOpen = false">
+            Ajuda
+          </router-link>
           <button @click="auth.logout" class="block w-full text-left px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg">
             Sair
           </button>
         </template>
         <template v-else>
+          <router-link to="/ajuda" class="block px-3 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" @click="mobileOpen = false">
+            Ajuda
+          </router-link>
           <router-link to="/login" class="block px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg" @click="mobileOpen = false">
             Entrar
           </router-link>

@@ -16,10 +16,15 @@ import (
 )
 
 var (
-	ErrNumbersUnavailable   = errors.New("one or more numbers are unavailable")
-	ErrRaffleNotActive      = errors.New("raffle is not active")
-	ErrOrganizerNotFound    = errors.New("organizer not found")
-	ErrInvalidPaymentType   = errors.New("invalid payment type")
+	ErrNumbersUnavailable    = errors.New("one or more numbers are unavailable")
+	ErrRaffleNotActive       = errors.New("raffle is not active")
+	ErrOrganizerNotFound     = errors.New("organizer not found")
+	ErrInvalidPaymentType    = errors.New("invalid payment type")
+	ErrInvalidPaymentID      = errors.New("invalid payment id")
+	ErrPaymentNotFound       = errors.New("payment not found")
+	ErrPaymentNotPending     = errors.New("payment is not pending")
+	ErrPaymentNotConfirmed   = errors.New("payment not confirmed by provider")
+	ErrPaymentAmountMismatch = errors.New("paid amount is less than expected")
 )
 
 type PaymentService struct {
@@ -257,6 +262,82 @@ func (s *PaymentService) GetPaymentByID(ctx context.Context, paymentID string) (
 		return nil, errors.New("invalid payment id")
 	}
 	return s.paymentRepo.FindByID(ctx, oid)
+}
+
+// resolveRaffleHandle returns the InfinitePay handle used to settle a raffle
+// payment: the organizer's own handle, falling back to the platform handle.
+func (s *PaymentService) resolveRaffleHandle(ctx context.Context, raffleID primitive.ObjectID) string {
+	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)
+	if err != nil {
+		return s.cfg.InfinitePayHandle
+	}
+	organizer, err := s.userRepo.FindByID(ctx, raffle.OrganizerID)
+	if err != nil || organizer.InfinitePayHandle == "" {
+		return s.cfg.InfinitePayHandle
+	}
+	return organizer.InfinitePayHandle
+}
+
+// ConfirmRafflePayment verifies a pending raffle payment directly with
+// InfinitePay (order_nsu == payment id) and, only if genuinely paid for at
+// least the expected amount, marks the payment and its tickets as paid.
+// Idempotent: an already-paid payment returns success without side effects.
+func (s *PaymentService) ConfirmRafflePayment(ctx context.Context, paymentID string) (*model.Payment, error) {
+	oid, err := primitive.ObjectIDFromHex(paymentID)
+	if err != nil {
+		return nil, ErrInvalidPaymentID
+	}
+
+	payment, err := s.paymentRepo.FindByID(ctx, oid)
+	if err != nil {
+		return nil, ErrPaymentNotFound
+	}
+	if payment.Type != model.PaymentTypeRaffle {
+		return nil, ErrInvalidPaymentType
+	}
+	if payment.Status == model.PaymentStatusPaid {
+		return payment, nil
+	}
+	if payment.Status != model.PaymentStatusPending {
+		return nil, ErrPaymentNotPending
+	}
+
+	handle := s.resolveRaffleHandle(ctx, payment.RaffleID)
+	check, err := s.infiniteClient.CheckPayment(infinitepay.PaymentCheckRequest{
+		Handle:   handle,
+		OrderNSU: payment.ID.Hex(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify payment: %w", err)
+	}
+	if !check.Success || !check.Paid {
+		return nil, ErrPaymentNotConfirmed
+	}
+	if check.PaidAmount < payment.Amount {
+		return nil, ErrPaymentAmountMismatch
+	}
+
+	now := time.Now()
+	if err := s.paymentRepo.UpdateStatus(ctx, payment.ID, model.PaymentStatusPaid, &now); err != nil {
+		return nil, err
+	}
+
+	method := model.PaymentMethodPIX
+	if check.CaptureMethod == "credit_card" {
+		method = model.PaymentMethodCard
+	}
+	if err := s.paymentRepo.UpdateFields(ctx, payment.ID, primitive.M{"paymentMethod": method}); err != nil {
+		return nil, err
+	}
+
+	if err := s.ticketRepo.MarkAsPaid(ctx, payment.TicketIDs, payment.BuyerName, payment.BuyerPhone, payment.ID.Hex()); err != nil {
+		return nil, err
+	}
+
+	payment.Status = model.PaymentStatusPaid
+	payment.PaidAt = &now
+	payment.PaymentMethod = method
+	return payment, nil
 }
 
 

@@ -15,9 +15,9 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/redis/go-redis/v9"
-	"golang.org/x/crypto/bcrypt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/user/rifa-online/internal/config"
 	"github.com/user/rifa-online/internal/handler"
@@ -70,6 +70,7 @@ func main() {
 	ticketRepo := repository.NewTicketRepo(db)
 	paymentRepo := repository.NewPaymentRepo(db)
 	webhookRepo := repository.NewWebhookRepo(db)
+	contactRepo := repository.NewContactRepo(db)
 
 	if err := migrations.Run(ctx, db); err != nil {
 		logger.Error("failed to run migrations", "error", err)
@@ -94,9 +95,10 @@ func main() {
 
 	raffleHandler := handler.NewRaffleHandler(raffleService)
 	paymentHandler := handler.NewPaymentHandler(paymentService, paymentRepo, ticketRepo, userRepo)
-	webhookHandler := handler.NewWebhookHandler(paymentRepo, ticketRepo, webhookRepo, userRepo, subscriptionService, cfg, logger)
+	webhookHandler := handler.NewWebhookHandler(paymentService, subscriptionService, webhookRepo, logger)
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionService)
 	adminHandler := handler.NewAdminHandler(userRepo, raffleRepo, ticketRepo, paymentRepo)
+	contactHandler := handler.NewContactHandler(contactRepo)
 
 	authMw := middleware.Auth(cfg)
 
@@ -140,10 +142,10 @@ func main() {
 				r.Post("/", raffleHandler.Create)
 				r.Put("/{id}", raffleHandler.Update)
 				r.Patch("/{id}/cancel", raffleHandler.Cancel)
-			r.Delete("/{id}", raffleHandler.Delete)
-			r.Post("/{id}/draw", raffleHandler.Draw)
-			r.Get("/my", raffleHandler.MyRaffles)
-			r.Get("/{id}/stats", raffleHandler.Stats)
+				r.Delete("/{id}", raffleHandler.Delete)
+				r.Post("/{id}/draw", raffleHandler.Draw)
+				r.Get("/my", raffleHandler.MyRaffles)
+				r.Get("/{id}/stats", raffleHandler.Stats)
 			})
 		})
 
@@ -159,6 +161,8 @@ func main() {
 		})
 
 		r.Post("/webhooks/infinitepay", webhookHandler.HandleInfinitePay)
+
+		r.Post("/contact", contactHandler.Create)
 
 		r.Route("/dashboard", func(r chi.Router) {
 			r.Use(authMw)
@@ -190,6 +194,7 @@ func main() {
 			r.Put("/users/{id}/subscription", adminHandler.UpdateUserSubscription)
 			r.Get("/raffles", adminHandler.Raffles)
 			r.Get("/stats", adminHandler.Stats)
+			r.Get("/contact-messages", contactHandler.List)
 		})
 	})
 
@@ -276,11 +281,11 @@ func seedDefaultUser(userRepo *repository.UserRepo) {
 	now := time.Now()
 	expiresAt := now.AddDate(1, 0, 0)
 	user := &model.User{
-		Name:                 "Administrador",
-		Email:                email,
-		PasswordHash:         string(hash),
-		Role:                 model.RoleAdmin,
-		SubscriptionStatus:   model.SubscriptionStatusActive,
+		Name:                  "Administrador",
+		Email:                 email,
+		PasswordHash:          string(hash),
+		Role:                  model.RoleAdmin,
+		SubscriptionStatus:    model.SubscriptionStatusActive,
 		SubscriptionExpiresAt: &expiresAt,
 		HasSubscriptionBefore: true,
 	}

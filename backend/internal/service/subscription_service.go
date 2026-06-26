@@ -132,6 +132,58 @@ func (s *SubscriptionService) CreateSubscriptionCheckout(ctx context.Context, us
 	}, nil
 }
 
+// ConfirmSubscriptionPayment verifies a pending subscription payment with
+// InfinitePay (order_nsu == "sub_"+payment id, platform handle) and only
+// activates the subscription if genuinely paid for at least the price.
+// Idempotent.
+func (s *SubscriptionService) ConfirmSubscriptionPayment(ctx context.Context, paymentID string) error {
+	oid, err := primitive.ObjectIDFromHex(paymentID)
+	if err != nil {
+		return errors.New("invalid payment id")
+	}
+
+	payment, err := s.paymentRepo.FindByID(ctx, oid)
+	if err != nil {
+		return ErrPaymentNotFound
+	}
+	if payment.Type != model.PaymentTypeSubscription {
+		return ErrInvalidPaymentType
+	}
+	if payment.Status == model.PaymentStatusPaid {
+		return nil
+	}
+	if payment.Status != model.PaymentStatusPending {
+		return ErrPaymentNotPending
+	}
+
+	check, err := s.infiniteClient.CheckPayment(infinitepay.PaymentCheckRequest{
+		Handle:   s.cfg.InfinitePayHandle,
+		OrderNSU: "sub_" + payment.ID.Hex(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to verify subscription payment: %w", err)
+	}
+	if !check.Success || !check.Paid {
+		return ErrPaymentNotConfirmed
+	}
+	if check.PaidAmount < payment.Amount {
+		return ErrPaymentAmountMismatch
+	}
+
+	now := time.Now()
+	if err := s.paymentRepo.UpdateStatus(ctx, payment.ID, model.PaymentStatusPaid, &now); err != nil {
+		return err
+	}
+
+	method := model.PaymentMethodPIX
+	if check.CaptureMethod == "credit_card" {
+		method = model.PaymentMethodCard
+	}
+	_ = s.paymentRepo.UpdateFields(ctx, payment.ID, primitive.M{"paymentMethod": method})
+
+	return s.ActivateSubscription(ctx, payment)
+}
+
 func (s *SubscriptionService) ActivateSubscription(ctx context.Context, payment *model.Payment) error {
 	now := time.Now()
 	expiresAt := now.AddDate(0, 1, 0)

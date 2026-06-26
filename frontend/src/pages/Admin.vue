@@ -41,10 +41,19 @@ interface AdminRaffle {
   createdAt: string
 }
 
+interface ContactMessage {
+  id: string
+  name: string
+  contact: string
+  message: string
+  createdAt: string
+}
+
 const stats = ref<AdminStats | null>(null)
 const users = ref<AdminUser[]>([])
 const raffles = ref<AdminRaffle[]>([])
-const activeTab = ref<"stats" | "users" | "raffles">("stats")
+const contactMessages = ref<ContactMessage[]>([])
+const activeTab = ref<"stats" | "users" | "raffles" | "contact">("stats")
 const loading = ref(true)
 const actionLoading = ref<string | null>(null)
 const selectedUser = ref<AdminUser | null>(null)
@@ -62,14 +71,16 @@ const confirmAction = ref<{ id: string; action: string; label: string } | null>(
 onMounted(async () => {
   loading.value = true
   try {
-    const [s, u, r] = await Promise.all([
+    const [s, u, r, c] = await Promise.all([
       api.get<AdminStats>("/admin/stats"),
       api.get<AdminUser[]>("/admin/users"),
       api.get<AdminRaffle[]>("/admin/raffles"),
+      api.get<ContactMessage[]>("/admin/contact-messages"),
     ])
     stats.value = s
     users.value = u
     raffles.value = r
+    contactMessages.value = c
   } catch {
     console.error("Failed to load admin data")
   } finally {
@@ -316,6 +327,10 @@ function sortIcon(field: string, type: "user" | "raffle"): string {
             class="px-5 py-3 text-sm font-medium transition-colors"
             :class="activeTab === 'raffles' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'"
           >Rifas ({{ raffles.length }})</button>
+          <button @click="activeTab = 'contact'"
+            class="px-5 py-3 text-sm font-medium transition-colors"
+            :class="activeTab === 'contact' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'"
+          >Mensagens ({{ contactMessages.length }})</button>
         </div>
 
         <div v-if="activeTab === 'stats'" class="p-6">
@@ -505,6 +520,18 @@ function sortIcon(field: string, type: "user" | "raffle"): string {
             </tbody>
           </table>
           <p v-if="raffles.length === 0" class="text-center py-8 text-gray-500">Nenhuma rifa encontrada</p>
+        </div>
+
+        <div v-if="activeTab === 'contact'" class="p-6 space-y-4">
+          <div v-for="m in contactMessages" :key="m.id" class="border border-gray-200 rounded-xl p-4">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="font-semibold text-gray-900">{{ m.name }}</span>
+              <span class="text-xs text-gray-400">{{ new Date(m.createdAt).toLocaleString("pt-BR") }}</span>
+            </div>
+            <p v-if="m.contact" class="text-sm text-indigo-600 mb-2">{{ m.contact }}</p>
+            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ m.message }}</p>
+          </div>
+          <p v-if="contactMessages.length === 0" class="text-center py-8 text-gray-500">Nenhuma mensagem recebida</p>
         </div>
       </div>
     </template>

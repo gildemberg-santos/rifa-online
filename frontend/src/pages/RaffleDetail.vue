@@ -5,7 +5,7 @@ import { api } from "../utils/api"
 import { useAuthStore } from "../stores/auth"
 import NumberGrid from "../components/NumberGrid.vue"
 
-const RESERVATION_TTL = 30 * 60
+const RESERVATION_TTL = 10 * 60
 
 interface Raffle {
   id: string

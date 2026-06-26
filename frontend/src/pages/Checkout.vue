@@ -12,6 +12,7 @@ const numbers = computed(() =>
 
 const buyerName = ref("")
 const buyerPhone = ref("")
+const acceptedTerms = ref(false)
 const loading = ref(false)
 const error = ref("")
 
@@ -38,7 +39,7 @@ function isValidPhone(phone: string): boolean {
 }
 
 async function submit() {
-  if (!buyerName.value || !isValidPhone(buyerPhone.value)) return
+  if (!buyerName.value || !isValidPhone(buyerPhone.value) || !acceptedTerms.value) return
   loading.value = true
   error.value = ""
 
@@ -105,11 +106,25 @@ async function submit() {
           </p>
         </div>
 
+        <label class="flex items-start gap-2 text-sm text-gray-600">
+          <input
+            v-model="acceptedTerms"
+            type="checkbox"
+            class="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span>
+            Autorizo o uso do meu nome e telefone para identificação da compra e concordo com os
+            <router-link to="/termos-de-uso" target="_blank" class="text-indigo-600 hover:text-indigo-700 font-medium">Termos de Uso</router-link>
+            e a
+            <router-link to="/politica-de-privacidade" target="_blank" class="text-indigo-600 hover:text-indigo-700 font-medium">Política de Privacidade</router-link>.
+          </span>
+        </label>
+
         <p v-if="error" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{{ error }}</p>
 
         <button
           type="submit"
-          :disabled="loading || (buyerPhone.length > 0 && !isValidPhone(buyerPhone))"
+          :disabled="loading || !acceptedTerms || (buyerPhone.length > 0 && !isValidPhone(buyerPhone))"
           class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 shadow-md hover:shadow-lg transition-all"
         >
           <span v-if="loading" class="inline-flex items-center gap-2">

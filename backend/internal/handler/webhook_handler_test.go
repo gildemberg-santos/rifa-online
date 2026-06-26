@@ -8,7 +8,7 @@ import (
 )
 
 func TestWebhookHandler_HandleInfinitePay_InvalidBody(t *testing.T) {
-	handler := NewWebhookHandler(nil, nil, nil, nil, nil, nil, slog.New(slog.DiscardHandler))
+	handler := NewWebhookHandler(nil, nil, nil, slog.New(slog.DiscardHandler))
 
 	req := makeRequest("POST", "/api/v1/webhooks/infinitepay", `{invalid}`)
 	resp := httptest.NewRecorder()

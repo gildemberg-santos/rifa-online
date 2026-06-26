@@ -123,7 +123,7 @@ type RaffleDetail struct {
 	Tickets []model.Ticket `json:"tickets"`
 }
 
-const reservationTTL = 30 * time.Minute
+const reservationTTL = 10 * time.Minute
 
 func (s *RaffleService) GetDetail(ctx context.Context, raffleID primitive.ObjectID) (*RaffleDetail, error) {
 	raffle, err := s.raffleRepo.FindByID(ctx, raffleID)

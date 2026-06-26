@@ -5,7 +5,8 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	client := NewClient("myhandle", "https://example.com/webhook", "https://example.com/redirect")
+	const baseURL = "https://api.checkout.infinitepay.io"
+	client := NewClient("myhandle", "https://example.com/webhook", "https://example.com/redirect", baseURL)
 	if client == nil {
 		t.Fatal("expected non-nil client")
 	}
@@ -18,20 +19,20 @@ func TestNewClient(t *testing.T) {
 	if client.redirectURL != "https://example.com/redirect" {
 		t.Errorf("expected redirectURL 'https://example.com/redirect', got '%s'", client.redirectURL)
 	}
-	if client.baseURL != defaultBaseURL {
-		t.Errorf("expected baseURL '%s', got '%s'", defaultBaseURL, client.baseURL)
+	if client.baseURL != baseURL {
+		t.Errorf("expected baseURL '%s', got '%s'", baseURL, client.baseURL)
 	}
 }
 
 func TestNewClient_EmptyHandle(t *testing.T) {
-	client := NewClient("", "", "")
+	client := NewClient("", "", "", "")
 	if client.handle != "" {
 		t.Errorf("expected empty handle, got '%s'", client.handle)
 	}
 }
 
 func TestCreateCheckoutRequest_DefaultsHandle(t *testing.T) {
-	client := NewClient("client-handle", "https://wh", "https://rd")
+	client := NewClient("client-handle", "https://wh", "https://rd", "https://api.checkout.infinitepay.io")
 
 	req := CreateCheckoutRequest{
 		Items: []CheckoutItem{

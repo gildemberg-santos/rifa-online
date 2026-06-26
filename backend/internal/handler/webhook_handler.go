@@ -6,42 +6,32 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-
-	"github.com/user/rifa-online/internal/config"
 	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/repository"
 	"github.com/user/rifa-online/internal/service"
 	"github.com/user/rifa-online/internal/webhook"
 )
 
+// WebhookHandler receives InfinitePay notifications. The webhook body is NOT
+// trusted: it only acts as a trigger to re-verify the payment server-to-server
+// via the payment/subscription services (which call InfinitePay CheckPayment).
 type WebhookHandler struct {
-	paymentRepo        *repository.PaymentRepo
-	ticketRepo         *repository.TicketRepo
-	webhookRepo        *repository.WebhookRepo
-	userRepo           *repository.UserRepo
-	subscriptionSvc    *service.SubscriptionService
-	cfg                *config.Config
-	logger             *slog.Logger
+	paymentService  *service.PaymentService
+	subscriptionSvc *service.SubscriptionService
+	webhookRepo     *repository.WebhookRepo
+	logger          *slog.Logger
 }
 
 func NewWebhookHandler(
-	paymentRepo *repository.PaymentRepo,
-	ticketRepo *repository.TicketRepo,
-	webhookRepo *repository.WebhookRepo,
-	userRepo *repository.UserRepo,
+	paymentService *service.PaymentService,
 	subscriptionSvc *service.SubscriptionService,
-	cfg *config.Config,
+	webhookRepo *repository.WebhookRepo,
 	logger *slog.Logger,
 ) *WebhookHandler {
 	return &WebhookHandler{
-		paymentRepo:     paymentRepo,
-		ticketRepo:      ticketRepo,
-		webhookRepo:     webhookRepo,
-		userRepo:        userRepo,
+		paymentService:  paymentService,
 		subscriptionSvc: subscriptionSvc,
-		cfg:             cfg,
+		webhookRepo:     webhookRepo,
 		logger:          logger,
 	}
 }
@@ -54,116 +44,44 @@ func (h *WebhookHandler) HandleInfinitePay(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Idempotency: skip events we already settled. Keyed by transaction NSU
+	// (unique per transaction), falling back to order NSU.
+	eventID := payload.TransactionNSU
+	if eventID == "" {
+		eventID = payload.OrderNSU
+	}
+	if exists, err := h.webhookRepo.ExistsByEventID(r.Context(), eventID); err == nil && exists {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if strings.HasPrefix(payload.OrderNSU, "sub_") {
-		h.handleSubscriptionWebhook(w, r, payload)
+		paymentID := strings.TrimPrefix(payload.OrderNSU, "sub_")
+		if err := h.subscriptionSvc.ConfirmSubscriptionPayment(r.Context(), paymentID); err != nil {
+			h.logger.Warn("subscription webhook not settled", "order_nsu", payload.OrderNSU, "error", err)
+			// Not yet confirmed by provider: don't record the event so a later
+			// (genuine) webhook can re-process. Still 200 to ack receipt.
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		h.logger.Info("subscription settled via webhook", "order_nsu", payload.OrderNSU)
 	} else {
-		h.handleRaffleWebhook(w, r, payload)
-	}
-}
-
-func (h *WebhookHandler) handleSubscriptionWebhook(w http.ResponseWriter, r *http.Request, payload *webhook.InfinitePayWebhookPayload) {
-	paymentID := strings.TrimPrefix(payload.OrderNSU, "sub_")
-
-	oid, err := primitive.ObjectIDFromHex(paymentID)
-	if err != nil {
-		h.logger.Error("invalid subscription payment id", "order_nsu", payload.OrderNSU)
-		w.WriteHeader(http.StatusOK)
-		return
+		if _, err := h.paymentService.ConfirmRafflePayment(r.Context(), payload.OrderNSU); err != nil {
+			h.logger.Warn("raffle webhook not settled", "order_nsu", payload.OrderNSU, "error", err)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		h.logger.Info("raffle settled via webhook", "order_nsu", payload.OrderNSU)
 	}
 
-	payment, err := h.paymentRepo.FindByID(r.Context(), oid)
-	if err != nil {
-		h.logger.Error("subscription payment not found", "payment_id", paymentID, "error", err)
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if payment.Status == model.PaymentStatusPaid {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	paymentMethod := model.PaymentMethodPIX
-	if payload.CaptureMethod == "credit_card" {
-		paymentMethod = model.PaymentMethodCard
-	}
-
-	now := time.Now()
-	if err := h.paymentRepo.UpdateStatus(r.Context(), payment.ID, model.PaymentStatusPaid, &now); err != nil {
-		h.logger.Error("failed to update subscription payment status", "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if err := h.paymentRepo.UpdateFields(r.Context(), payment.ID, bson.M{
-		"invoiceSlug":    payload.InvoiceSlug,
-		"transactionNsu": payload.TransactionNSU,
-		"paymentMethod":  paymentMethod,
+	if err := h.webhookRepo.Insert(r.Context(), &model.WebhookEvent{
+		EventID:   eventID,
+		Event:     "payment.paid",
+		Processed: true,
+		CreatedAt: time.Now(),
 	}); err != nil {
-		h.logger.Error("failed to update subscription payment fields", "error", err)
+		h.logger.Error("failed to record webhook event", "event_id", eventID, "error", err)
 	}
-
-	if err := h.subscriptionSvc.ActivateSubscription(r.Context(), payment); err != nil {
-		h.logger.Error("failed to activate subscription", "user_id", payment.UserID.Hex(), "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	h.logger.Info("subscription payment completed via webhook",
-		"user_id", payment.UserID.Hex(),
-		"invoice_slug", payload.InvoiceSlug,
-	)
 
 	w.WriteHeader(http.StatusOK)
 }
-
-func (h *WebhookHandler) handleRaffleWebhook(w http.ResponseWriter, r *http.Request, payload *webhook.InfinitePayWebhookPayload) {
-	payment, err := h.paymentRepo.FindByOrderNSU(r.Context(), payload.OrderNSU)
-	if err != nil {
-		h.logger.Error("payment not found for order_nsu", "order_nsu", payload.OrderNSU, "error", err)
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if payment.Status == model.PaymentStatusPaid {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	paymentMethod := model.PaymentMethodPIX
-	if payload.CaptureMethod == "credit_card" {
-		paymentMethod = model.PaymentMethodCard
-	}
-
-	now := time.Now()
-	if err := h.paymentRepo.UpdateStatus(r.Context(), payment.ID, model.PaymentStatusPaid, &now); err != nil {
-		h.logger.Error("failed to update payment status", "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if err := h.paymentRepo.UpdateFields(r.Context(), payment.ID, bson.M{
-		"invoiceSlug":    payload.InvoiceSlug,
-		"transactionNsu": payload.TransactionNSU,
-		"paymentMethod":  paymentMethod,
-	}); err != nil {
-		h.logger.Error("failed to update payment fields", "error", err)
-	}
-
-	if err := h.ticketRepo.MarkAsPaid(r.Context(), payment.TicketIDs, payment.BuyerName, payment.BuyerPhone, payment.ID.Hex()); err != nil {
-		h.logger.Error("failed to mark tickets as paid", "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	h.logger.Info("raffle payment completed via webhook",
-		"order_nsu", payload.OrderNSU,
-		"invoice_slug", payload.InvoiceSlug,
-		"amount", payload.PaidAmount,
-		"method", payload.CaptureMethod,
-	)
-
-	w.WriteHeader(http.StatusOK)
-}
-
-

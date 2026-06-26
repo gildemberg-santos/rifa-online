@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/user/rifa-online/internal/middleware"
-	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/repository"
 	"github.com/user/rifa-online/internal/service"
 )
@@ -86,35 +84,27 @@ func (h *PaymentHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 func (h *PaymentHandler) ConfirmPayment(w http.ResponseWriter, r *http.Request) {
 	paymentID := chi.URLParam(r, "id")
 
-	oid, err := primitive.ObjectIDFromHex(paymentID)
+	payment, err := h.paymentService.ConfirmRafflePayment(r.Context(), paymentID)
 	if err != nil {
-		writeError(w, "invalid payment id", http.StatusBadRequest)
+		switch {
+		case errors.Is(err, service.ErrInvalidPaymentID):
+			writeError(w, "invalid payment id", http.StatusBadRequest)
+		case errors.Is(err, service.ErrPaymentNotFound):
+			writeError(w, "payment not found", http.StatusNotFound)
+		case errors.Is(err, service.ErrPaymentNotPending):
+			writeError(w, "payment is not pending", http.StatusBadRequest)
+		case errors.Is(err, service.ErrInvalidPaymentType):
+			writeError(w, "invalid payment type", http.StatusBadRequest)
+		case errors.Is(err, service.ErrPaymentNotConfirmed), errors.Is(err, service.ErrPaymentAmountMismatch):
+			// Provider has not confirmed payment (or underpaid): not yet paid.
+			writeError(w, "payment not confirmed", http.StatusPaymentRequired)
+		default:
+			writeError(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
-	payment, err := h.paymentRepo.FindByID(r.Context(), oid)
-	if err != nil {
-		writeError(w, "payment not found", http.StatusNotFound)
-		return
-	}
-
-	if payment.Status != model.PaymentStatusPending {
-		writeError(w, "payment is not pending", http.StatusBadRequest)
-		return
-	}
-
-	now := time.Now()
-	if err := h.paymentRepo.UpdateStatus(r.Context(), payment.ID, model.PaymentStatusPaid, &now); err != nil {
-		writeError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := h.ticketRepo.MarkAsPaid(r.Context(), payment.TicketIDs, payment.BuyerName, payment.BuyerPhone, payment.ID.Hex()); err != nil {
-		writeError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]string{"status": "confirmed"})
+	writeJSON(w, http.StatusOK, map[string]string{"status": string(payment.Status)})
 }
 
 func (h *PaymentHandler) MyPayments(w http.ResponseWriter, r *http.Request) {

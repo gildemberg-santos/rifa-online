@@ -91,6 +91,41 @@ const router = createRouter({
       component: () => import("../pages/Admin.vue"),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
+    {
+      path: "/termos-de-uso",
+      name: "terms-of-use",
+      component: () => import("../pages/legal/TermsOfUse.vue"),
+    },
+    {
+      path: "/politica-de-privacidade",
+      name: "privacy-policy",
+      component: () => import("../pages/legal/PrivacyPolicy.vue"),
+    },
+    {
+      path: "/politica-de-cookies",
+      name: "cookie-policy",
+      component: () => import("../pages/legal/CookiePolicy.vue"),
+    },
+    {
+      path: "/termo-do-organizador",
+      name: "organizer-terms",
+      component: () => import("../pages/legal/OrganizerTerms.vue"),
+    },
+    {
+      path: "/contato",
+      name: "contact",
+      component: () => import("../pages/Contact.vue"),
+    },
+    {
+      path: "/ajuda",
+      name: "help",
+      component: () => import("../pages/Help.vue"),
+    },
+    {
+      path: "/ajuda/:slug",
+      name: "help-article",
+      component: () => import("../pages/HelpArticle.vue"),
+    },
   ],
 })
 
