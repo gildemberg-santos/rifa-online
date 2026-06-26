@@ -132,7 +132,7 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem("accessToken")
   if (to.meta.requiresAuth && !token) {
-    next({ name: "login" })
+    next({ name: "login", query: { redirect: to.fullPath } })
     return
   }
   if (to.meta.requiresAdmin) {

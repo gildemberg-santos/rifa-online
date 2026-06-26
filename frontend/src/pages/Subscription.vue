@@ -168,7 +168,7 @@ const canCreateCheckout = computed(() =>
           </div>
           <div class="flex items-center justify-between py-3">
             <span class="text-gray-600">Recebimento</span>
-            <span class="font-semibold text-gray-900">InfinitePay</span>
+            <img src="../assets/infinitepay-logo.svg" alt="InfinitePay" class="h-5" />
           </div>
         </div>
 

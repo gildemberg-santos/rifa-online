@@ -1,4 +1,5 @@
 import router from "../router"
+import { accessToken, refreshToken, setSession, clearSession } from "./session"
 
 const API_URL = import.meta.env.VITE_API_URL || ""
 const BASE_URL = API_URL ? `${API_URL}/api/v1` : "/api/v1"
@@ -16,12 +17,6 @@ function isAuthEndpoint(path: string): boolean {
   return path.startsWith("/auth/")
 }
 
-function clearSession() {
-  localStorage.removeItem("accessToken")
-  localStorage.removeItem("refreshToken")
-  localStorage.removeItem("user")
-}
-
 function redirectToLogin() {
   clearSession()
   const current = router.currentRoute.value
@@ -37,20 +32,17 @@ function refreshAccessToken(): Promise<boolean> {
   if (refreshing) return refreshing
 
   refreshing = (async () => {
-    const refreshToken = localStorage.getItem("refreshToken")
-    if (!refreshToken) return false
+    if (!refreshToken.value) return false
     try {
       const res = await fetch(`${BASE_URL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify({ refreshToken: refreshToken.value }),
       })
       if (!res.ok) return false
       const data = await res.json()
       if (!data?.accessToken) return false
-      localStorage.setItem("accessToken", data.accessToken)
-      if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken)
-      if (data.user) localStorage.setItem("user", JSON.stringify(data.user))
+      setSession({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user })
       return true
     } catch {
       return false
@@ -68,9 +60,8 @@ async function request<T>(method: string, path: string, body?: unknown, retried 
     "Content-Type": "application/json",
   }
 
-  const token = localStorage.getItem("accessToken")
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`
+  if (accessToken.value) {
+    headers["Authorization"] = `Bearer ${accessToken.value}`
   }
 
   const res = await fetch(`${BASE_URL}${path}`, {

@@ -17,7 +17,8 @@ async function submit() {
   error.value = ""
   try {
     await auth.login(email.value, password.value)
-    router.push("/dashboard")
+    const redirect = route.query.redirect as string | undefined
+    router.push(redirect || "/dashboard")
   } catch (e: any) {
     error.value = e.message || "Erro ao fazer login"
   } finally {

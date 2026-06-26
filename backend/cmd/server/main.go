@@ -45,6 +45,13 @@ func main() {
 
 	logger.Info("starting server", "port", cfg.Port, "log_format", cfg.LogFormat, "log_level", cfg.LogLevel)
 
+	// Segurança: não permite subir fora de desenvolvimento com um JWT_SECRET fraco/padrão,
+	// o que permitiria forjar tokens e burlar a autenticação.
+	if cfg.AppEnv != "development" && (cfg.JWTSecret == "" || cfg.JWTSecret == "change-me" || len(cfg.JWTSecret) < 32) {
+		logger.Error("insecure JWT_SECRET: defina um segredo forte (>= 32 caracteres) em produção")
+		os.Exit(1)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -120,8 +127,12 @@ func main() {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/register", authHandler.Register)
-			r.Post("/login", authHandler.Login)
+			// Limita tentativas de cadastro/login por IP (anti brute force / spam).
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.RateLimit(10, time.Minute))
+				r.Post("/register", authHandler.Register)
+				r.Post("/login", authHandler.Login)
+			})
 			r.Post("/refresh", authHandler.Refresh)
 		})
 
@@ -162,7 +173,7 @@ func main() {
 
 		r.Post("/webhooks/infinitepay", webhookHandler.HandleInfinitePay)
 
-		r.Post("/contact", contactHandler.Create)
+		r.With(middleware.RateLimit(5, time.Minute)).Post("/contact", contactHandler.Create)
 
 		r.Route("/dashboard", func(r chi.Router) {
 			r.Use(authMw)

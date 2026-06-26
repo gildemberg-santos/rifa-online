@@ -231,7 +231,10 @@ function subscriptionColor(status: string): string {
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-        <h2 class="text-lg font-bold text-gray-900 mb-4">Conta InfinitePay</h2>
+        <div class="flex items-center gap-3 mb-4">
+          <img src="../assets/infinitepay-logo.svg" alt="InfinitePay" class="h-6" />
+          <h2 class="text-lg font-bold text-gray-900">Conta InfinitePay</h2>
+        </div>
         <p class="text-sm text-gray-500 mb-4">
           Conecte sua conta InfinitePay para receber os pagamentos das rifas diretamente.
         </p>
