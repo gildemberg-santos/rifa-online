@@ -128,8 +128,10 @@ func (h *PaymentHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 
 func (h *PaymentHandler) ConfirmPayment(w http.ResponseWriter, r *http.Request) {
 	paymentID := chi.URLParam(r, "id")
+	transactionNSU := r.URL.Query().Get("transaction_nsu")
+	slug := r.URL.Query().Get("slug")
 
-	payment, err := h.paymentService.ConfirmRafflePayment(r.Context(), paymentID)
+	payment, err := h.paymentService.ConfirmRafflePayment(r.Context(), paymentID, transactionNSU, slug)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrInvalidPaymentID):

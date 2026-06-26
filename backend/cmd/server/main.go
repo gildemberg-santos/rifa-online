@@ -380,7 +380,7 @@ func retryPendingPayments(logger *slog.Logger, paymentService *service.PaymentSe
 		}
 
 		for _, p := range payments {
-			if _, err := paymentService.ConfirmRafflePayment(ctx, p.ID.Hex()); err != nil {
+			if _, err := paymentService.ConfirmRafflePayment(ctx, p.ID.Hex(), "", ""); err != nil {
 				logger.Debug("pending payment still not confirmed", "payment_id", p.ID.Hex(), "error", err)
 			} else {
 				logger.Info("pending payment auto-confirmed", "payment_id", p.ID.Hex())

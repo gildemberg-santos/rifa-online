@@ -43,6 +43,7 @@ type PaymentCheckResponse struct {
 
 type WebhookPayload struct {
 	InvoiceSlug    string           `json:"invoice_slug"`
+	Slug           string           `json:"slug,omitempty"`
 	Amount         int              `json:"amount"`
 	PaidAmount     int              `json:"paid_amount"`
 	Installments   int              `json:"installments"`

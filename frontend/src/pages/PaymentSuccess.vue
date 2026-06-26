@@ -16,8 +16,13 @@ onMounted(async () => {
     return
   }
 
+  const params = new URLSearchParams()
+  if (route.query.transaction_nsu) params.set("transaction_nsu", route.query.transaction_nsu as string)
+  if (route.query.slug) params.set("slug", route.query.slug as string)
+  const qs = params.toString()
+
   try {
-    await api.post(`/payments/${paymentId}/confirm`)
+    await api.post(`/payments/${paymentId}/confirm${qs ? `?${qs}` : ""}`)
     status.value = "confirmed"
     sendEvent("payment_success", { payment_id: paymentId })
   } catch (e: any) {

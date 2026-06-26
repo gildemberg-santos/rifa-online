@@ -66,7 +66,11 @@ func (h *WebhookHandler) HandleInfinitePay(w http.ResponseWriter, r *http.Reques
 		}
 		h.logger.Info("subscription settled via webhook", "order_nsu", payload.OrderNSU)
 	} else {
-		if _, err := h.paymentService.ConfirmRafflePayment(r.Context(), payload.OrderNSU); err != nil {
+		slug := payload.InvoiceSlug
+		if slug == "" {
+			slug = payload.Slug
+		}
+		if _, err := h.paymentService.ConfirmRafflePayment(r.Context(), payload.OrderNSU, payload.TransactionNSU, slug); err != nil {
 			h.logger.Warn("raffle webhook not settled", "order_nsu", payload.OrderNSU, "error", err)
 			w.WriteHeader(http.StatusOK)
 			return

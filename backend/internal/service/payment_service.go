@@ -371,7 +371,8 @@ func (s *PaymentService) resolveRaffleHandle(ctx context.Context, raffleID primi
 // InfinitePay (order_nsu == payment id) and, only if genuinely paid for at
 // least the expected amount, marks the payment and its tickets as paid.
 // Idempotent: an already-paid payment returns success without side effects.
-func (s *PaymentService) ConfirmRafflePayment(ctx context.Context, paymentID string) (*model.Payment, error) {
+// transactionNSU and slug are optional params from the InfinitePay redirect.
+func (s *PaymentService) ConfirmRafflePayment(ctx context.Context, paymentID, transactionNSU, slug string) (*model.Payment, error) {
 	oid, err := primitive.ObjectIDFromHex(paymentID)
 	if err != nil {
 		return nil, ErrInvalidPaymentID
@@ -393,8 +394,10 @@ func (s *PaymentService) ConfirmRafflePayment(ctx context.Context, paymentID str
 
 	handle := s.resolveRaffleHandle(ctx, payment.RaffleID)
 	check, err := s.infiniteClient.CheckPayment(infinitepay.PaymentCheckRequest{
-		Handle:   handle,
-		OrderNSU: payment.ID.Hex(),
+		Handle:         handle,
+		OrderNSU:       payment.ID.Hex(),
+		TransactionNSU: transactionNSU,
+		Slug:           slug,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify payment: %w", err)
