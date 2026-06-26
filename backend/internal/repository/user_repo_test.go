@@ -11,7 +11,7 @@ import (
 
 func TestUserRepo(t *testing.T) {
 	ctx := context.Background()
-	repo := NewUserRepo(testDB)
+	repo := NewUserRepo(testDB, testCipher)
 	t.Run("Insert and FindByEmail", func(t *testing.T) {
 		user := &model.User{
 			Name:         "John Doe",

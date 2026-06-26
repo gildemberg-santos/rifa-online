@@ -20,6 +20,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/user/rifa-online/internal/config"
+	"github.com/user/rifa-online/internal/crypto"
 	"github.com/user/rifa-online/internal/handler"
 	"github.com/user/rifa-online/internal/middleware"
 	"github.com/user/rifa-online/internal/migrations"
@@ -72,12 +73,23 @@ func main() {
 
 	db := mongoClient.Database(cfg.MongoDBName)
 
-	userRepo := repository.NewUserRepo(db)
+	// Criptografia de campos sensíveis em repouso. Em produção, a ausência de
+	// chave deixa os dados em texto puro — alertamos para que seja configurada.
+	dataCipher, err := crypto.New(cfg.DataEncryptionKey, cfg.BlindIndexKey)
+	if err != nil {
+		logger.Error("failed to init data cipher", "error", err)
+		os.Exit(1)
+	}
+	if cfg.AppEnv != "development" && !dataCipher.Enabled() {
+		logger.Warn("DATA_ENCRYPTION_KEY ausente: dados sensíveis serão gravados sem criptografia")
+	}
+
+	userRepo := repository.NewUserRepo(db, dataCipher)
 	raffleRepo := repository.NewRaffleRepo(db)
-	ticketRepo := repository.NewTicketRepo(db)
-	paymentRepo := repository.NewPaymentRepo(db)
+	ticketRepo := repository.NewTicketRepo(db, dataCipher)
+	paymentRepo := repository.NewPaymentRepo(db, dataCipher)
 	webhookRepo := repository.NewWebhookRepo(db)
-	contactRepo := repository.NewContactRepo(db)
+	contactRepo := repository.NewContactRepo(db, dataCipher)
 
 	if err := migrations.Run(ctx, db); err != nil {
 		logger.Error("failed to run migrations", "error", err)
