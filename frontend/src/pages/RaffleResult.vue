@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue"
 import { useRoute } from "vue-router"
 import { api } from "../utils/api"
+import { sendEvent } from "../utils/analytics"
 
 interface Raffle {
   id: string
@@ -21,6 +22,7 @@ const loading = ref(true)
 onMounted(async () => {
   try {
     detail.value = await api.get<RaffleDetail>(`/raffles/${route.params.id}`)
+    sendEvent("raffle_result_viewed", { raffle_id: route.params.id as string })
   } catch (e) {
     console.error(e)
   } finally {

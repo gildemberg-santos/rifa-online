@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router"
+import { sendEvent } from "../utils/analytics"
 
 const titles: Record<string, string> = {
   "raffle-detail": "Detalhes da Rifa - Rifa Online",
@@ -178,7 +179,12 @@ router.beforeEach((to, _from, next) => {
 
 router.afterEach((to) => {
   const name = to.name as string
-  document.title = titles[name] || "Rifa Online - Plataforma de Rifas Online"
+  const title = titles[name] || "Rifa Online - Plataforma de Rifas Online"
+  document.title = title
+  sendEvent("page_view", {
+    page_path: to.fullPath,
+    page_title: title,
+  })
 })
 
 export default router

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from "vue"
 import { api } from "../utils/api"
 import { useAuthStore } from "../stores/auth"
+import { sendEvent } from "../utils/analytics"
 
 const auth = useAuthStore()
 const loading = ref(false)
@@ -43,6 +44,7 @@ async function createCheckout() {
     const result = await api.post<{ checkoutUrl?: string; isTrial: boolean }>(checkoutPath)
 
     if (result.isTrial) {
+      sendEvent("subscription_trial_started")
       trialActivated.value = true
       subscriptionStatus.value = "ACTIVE"
       subscriptionIsTrial.value = true
@@ -55,6 +57,7 @@ async function createCheckout() {
         auth.user.subscriptionIsTrial = true
       }
     } else if (result.checkoutUrl) {
+      sendEvent("subscription_checkout_started")
       window.location.href = result.checkoutUrl
     }
   } catch (e: any) {

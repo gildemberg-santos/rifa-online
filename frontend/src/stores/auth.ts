@@ -1,6 +1,7 @@
 import { defineStore } from "pinia"
 import { computed } from "vue"
 import { api } from "../utils/api"
+import { sendEvent } from "../utils/analytics"
 import router from "../router"
 import { accessToken, currentUser, setSession, clearSession, type SessionUser } from "../utils/session"
 
@@ -19,11 +20,13 @@ export const useAuthStore = defineStore("auth", () => {
   async function register(name: string, email: string, password: string) {
     const res = await api.post<AuthResponse>("/auth/register", { name, email, password })
     setSession(res)
+    sendEvent("user_registration", { method: "email", user_email: email })
   }
 
   async function login(email: string, password: string) {
     const res = await api.post<AuthResponse>("/auth/login", { email, password })
     setSession(res)
+    sendEvent("user_login", { method: "email", user_email: email })
   }
 
   async function refresh() {
@@ -36,7 +39,9 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function logout() {
+    const email = user.value?.email
     clearSession()
+    sendEvent("user_logout", { user_email: email })
     // Invalida o cookie de refresh no servidor (fire-and-forget).
     api.post("/auth/logout").catch(() => {})
     router.push("/login")

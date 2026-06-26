@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
 import { api } from "../utils/api"
+import { sendEvent } from "../utils/analytics"
 
 interface AdminStats {
   totalUsers: number
@@ -188,6 +189,7 @@ async function updateSubscription(userId: string, action: string) {
   actionLoading.value = userId
   try {
     await api.put(`/admin/users/${userId}/subscription`, { action })
+    sendEvent("admin_subscription_updated", { target_id: userId, action })
     const [s, u] = await Promise.all([
       api.get<AdminStats>("/admin/stats"),
       api.get<AdminUser[]>("/admin/users"),
@@ -207,8 +209,10 @@ async function raffleAction(raffleId: string, action: "draw" | "cancel") {
   try {
     if (action === "draw") {
       await api.post(`/raffles/${raffleId}/draw`)
+      sendEvent("admin_raffle_drawn", { raffle_id: raffleId })
     } else {
       await api.patch(`/raffles/${raffleId}/cancel`)
+      sendEvent("admin_raffle_cancelled", { raffle_id: raffleId })
     }
     const r = await api.get<AdminRaffle[]>("/admin/raffles")
     raffles.value = r

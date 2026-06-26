@@ -2,6 +2,7 @@
 import { ref, computed } from "vue"
 import { useRouter } from "vue-router"
 import { api } from "../utils/api"
+import { sendEvent } from "../utils/analytics"
 
 const router = useRouter()
 
@@ -44,6 +45,7 @@ async function submit() {
       maxNumbers: maxNumbers.value,
       drawDate: new Date(drawDate.value).toISOString(),
     })
+    sendEvent("raffle_created", { title: title.value, max_numbers: maxNumbers.value })
     router.push("/dashboard")
   } catch (e: any) {
     error.value = e.message || "Erro ao criar rifa"

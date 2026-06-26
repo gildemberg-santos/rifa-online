@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { api } from "../utils/api"
 import { useAuthStore } from "../stores/auth"
+import { sendEvent } from "../utils/analytics"
 import NumberGrid from "../components/NumberGrid.vue"
 
 const RESERVATION_TTL = 10 * 60
@@ -61,6 +62,7 @@ onMounted(async () => {
     }
 
     detail.value = await api.get<RaffleDetail>(`/raffles/${route.params.id}`)
+    sendEvent("raffle_viewed", { raffle_id: route.params.id as string, title: detail.value?.raffle.title })
   } catch (e) {
     console.error("Failed to load raffle detail", e)
   } finally {

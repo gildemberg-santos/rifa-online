@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { api } from "../utils/api"
+import { sendEvent } from "../utils/analytics"
 import howToAccount from "../assets/how-to-account.webp"
 
 interface User {
@@ -81,6 +82,7 @@ async function submit() {
     user.value = await api.put<User>("/me", body)
     password.value = ""
     message.value = "Perfil atualizado com sucesso"
+    sendEvent("profile_updated", { fields: Object.keys(body).join(",") })
   } catch (e: any) {
     message.value = e.message || "Erro ao atualizar perfil"
     isError.value = true
@@ -100,6 +102,7 @@ async function saveHandle() {
     })
     if (user.value) user.value.infinitePayHandle = result.infinitePayHandle
     handleMessage.value = "Conta InfinitePay conectada com sucesso"
+    sendEvent("infinite_pay_handle_updated")
   } catch {
     handleMessage.value = "Erro ao salvar conta InfinitePay"
     handleError.value = true

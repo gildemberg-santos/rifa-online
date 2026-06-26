@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { api } from "../utils/api"
+import { sendEvent } from "../utils/analytics"
 
 const route = useRoute()
 const router = useRouter()
@@ -47,6 +48,7 @@ async function submit() {
       maxNumbers: 0,
       drawDate: new Date(drawDate.value).toISOString(),
     })
+    sendEvent("raffle_edited", { raffle_id: raffleId })
     router.push((route.query.redirect as string) || "/dashboard")
   } catch (e: any) {
     error.value = e.message || "Erro ao atualizar rifa"

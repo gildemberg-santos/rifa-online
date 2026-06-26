@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue"
 import { api } from "../utils/api"
+import { sendEvent } from "../utils/analytics"
 
 const name = ref("")
 const contact = ref("")
@@ -23,6 +24,7 @@ async function submit() {
       message: message.value.trim(),
     })
     sent.value = true
+    sendEvent("contact_submitted")
   } catch (e: any) {
     error.value = e.message || "Não foi possível enviar a mensagem. Tente novamente."
   } finally {

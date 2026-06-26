@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue"
 import { api } from "../utils/api"
 import { useAuthStore } from "../stores/auth"
+import { sendEvent } from "../utils/analytics"
 
 const auth = useAuthStore()
 
@@ -60,6 +61,7 @@ async function deleteRaffle(id: string) {
   if (!confirm("Tem certeza que deseja excluir esta rifa? Esta ação não pode ser desfeita.")) return
   try {
     await api.delete(`/raffles/${id}`)
+    sendEvent("raffle_deleted", { raffle_id: id })
     raffles.value = raffles.value.filter((r) => r.id !== id)
   } catch (e: any) {
     alert(e.message || "Erro ao excluir rifa")
@@ -70,6 +72,7 @@ async function drawRaffle(id: string) {
   if (!confirm("Realizar sorteio?")) return
   try {
     await api.post(`/raffles/${id}/draw`)
+    sendEvent("raffle_drawn", { raffle_id: id })
     const idx = raffles.value.findIndex((r) => r.id === id)
     if (idx !== -1) raffles.value[idx].status = "DRAWN"
     if (stats.value) {

@@ -1,3 +1,12 @@
+<script setup lang="ts">
+import { onMounted } from "vue"
+import { sendEvent } from "../utils/analytics"
+
+onMounted(() => {
+  sendEvent("payment_success")
+})
+</script>
+
 <template>
   <div class="max-w-lg mx-auto px-4 py-12 text-center animate-fade-in">
     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 sm:p-10">

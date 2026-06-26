@@ -2,6 +2,7 @@
 import { ref, computed } from "vue"
 import { useRoute } from "vue-router"
 import { api } from "../utils/api"
+import { sendEvent } from "../utils/analytics"
 
 const route = useRoute()
 
@@ -49,6 +50,7 @@ async function submit() {
       buyerName: buyerName.value,
       buyerPhone: buyerPhone.value.replace(/\D/g, ""),
     })
+    sendEvent("checkout_started", { raffle_id: raffleId, numbers_count: numbers.value.length })
     window.location.href = result.checkoutUrl
   } catch (e: any) {
     error.value = e.message || "Erro ao criar checkout"
