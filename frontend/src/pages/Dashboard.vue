@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue"
 import { api } from "../utils/api"
 import { sendEvent } from "../utils/analytics"
+import { useAuthStore } from "../stores/auth"
 import { useNotification } from "../composables/useNotification"
 
 const auth = useAuthStore()
