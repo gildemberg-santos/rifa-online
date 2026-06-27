@@ -87,7 +87,7 @@ type userResponse struct {
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if 	err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -106,8 +106,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshCookie(w, result.RefreshToken)
-	writeJSON(w, http.StatusCreated, toAuthResponse(result))
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"user":       toUserResponse(result.User),
+		"emailSent":  true,
+		"message":    "Codigo de verificacao enviado para o email",
+	})
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -124,6 +127,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidCredentials) {
 			writeError(w, "invalid credentials", http.StatusUnauthorized)
+			return
+		}
+		if errors.Is(err, service.ErrEmailNotVerified) {
+			writeError(w, "email not verified", http.StatusForbidden)
 			return
 		}
 		writeError(w, err.Error(), http.StatusBadRequest)
@@ -216,6 +223,54 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	h.clearRefreshCookie(w)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+type verifyEmailRequest struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+type resendCodeRequest struct {
+	Email string `json:"email"`
+}
+
+func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	var req verifyEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.authService.VerifyEmail(r.Context(), req.Email, req.Code)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrInvalidCode):
+			writeError(w, "codigo invalido", http.StatusBadRequest)
+		case errors.Is(err, service.ErrCodeExpired):
+			writeError(w, "codigo expirado, solicite um novo", http.StatusBadRequest)
+		default:
+			writeError(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+
+	h.setRefreshCookie(w, result.RefreshToken)
+	writeJSON(w, http.StatusOK, toAuthResponse(result))
+}
+
+func (h *AuthHandler) ResendCode(w http.ResponseWriter, r *http.Request) {
+	var req resendCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.authService.ResendCode(r.Context(), req.Email); err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "codigo reenviado"})
 }
 
 func toAuthResponse(result *service.AuthResult) *authResponse {

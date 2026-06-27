@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/user/rifa-online/internal/config"
+	"github.com/user/rifa-online/internal/mailer"
 )
 
 func TestAuthService_RegisterValidation(t *testing.T) {
 	cfg := &config.Config{JWTSecret: "test-secret"}
-	service := NewAuthService(nil, cfg)
+	service := NewAuthService(nil, mailer.New("", 0, "", "", ""), cfg)
 
 	tests := []struct {
 		name    string
@@ -33,7 +34,7 @@ func TestAuthService_RegisterValidation(t *testing.T) {
 
 func TestAuthService_LoginValidation(t *testing.T) {
 	cfg := &config.Config{JWTSecret: "test-secret"}
-	service := NewAuthService(nil, cfg)
+	service := NewAuthService(nil, mailer.New("", 0, "", "", ""), cfg)
 
 	tests := []struct {
 		name    string

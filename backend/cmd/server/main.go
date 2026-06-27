@@ -22,6 +22,7 @@ import (
 	"github.com/user/rifa-online/internal/config"
 	"github.com/user/rifa-online/internal/crypto"
 	"github.com/user/rifa-online/internal/handler"
+	"github.com/user/rifa-online/internal/mailer"
 	"github.com/user/rifa-online/internal/middleware"
 	"github.com/user/rifa-online/internal/migrations"
 	"github.com/user/rifa-online/internal/model"
@@ -102,7 +103,12 @@ func main() {
 
 	seedDefaultUser(userRepo)
 
-	authService := service.NewAuthService(userRepo, cfg)
+	mailerSvc := mailer.New(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
+	if !mailerSvc.Enabled() {
+		logger.Warn("SMTP not configured — email verification will be disabled")
+	}
+
+	authService := service.NewAuthService(userRepo, mailerSvc, cfg)
 	authHandler := handler.NewAuthHandler(authService, cfg)
 
 	webhookURL := cfg.AppURL + "/api/v1/webhooks/infinitepay"
@@ -150,6 +156,8 @@ func main() {
 			})
 			r.Post("/refresh", authHandler.Refresh)
 			r.Post("/logout", authHandler.Logout)
+			r.Post("/verify-email", authHandler.VerifyEmail)
+			r.Post("/resend-code", authHandler.ResendCode)
 		})
 
 		subMw := middleware.RequiresSubscription(userRepo)

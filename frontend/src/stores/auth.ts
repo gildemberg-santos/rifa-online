@@ -18,9 +18,17 @@ export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = computed(() => !!accessToken.value)
 
   async function register(name: string, email: string, password: string) {
-    const res = await api.post<AuthResponse>("/auth/register", { name, email, password })
-    setSession(res)
+    await api.post("/auth/register", { name, email, password })
     sendEvent("user_registration", { method: "email", user_email: email })
+  }
+
+  async function verifyEmail(email: string, code: string) {
+    const res = await api.post<AuthResponse>("/auth/verify-email", { email, code })
+    setSession(res)
+  }
+
+  async function resendCode(email: string) {
+    await api.post("/auth/resend-code", { email })
   }
 
   async function login(email: string, password: string) {
@@ -47,5 +55,5 @@ export const useAuthStore = defineStore("auth", () => {
     router.push("/login")
   }
 
-  return { user, accessToken, isAuthenticated, setTokens, register, login, refresh, logout }
+  return { user, accessToken, isAuthenticated, setTokens, register, verifyEmail, resendCode, login, refresh, logout }
 })

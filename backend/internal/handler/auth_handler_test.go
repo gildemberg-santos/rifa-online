@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/user/rifa-online/internal/config"
+	"github.com/user/rifa-online/internal/mailer"
 	"github.com/user/rifa-online/internal/service"
 )
 
 func TestAuthHandler_Register_InvalidBody(t *testing.T) {
 	cfg := &config.Config{JWTSecret: "test-secret"}
-	authService := service.NewAuthService(nil, cfg)
+	authService := service.NewAuthService(nil, mailer.New("", 0, "", "", ""), cfg)
 	handler := NewAuthHandler(authService, cfg)
 
 	req := makeRequest("POST", "/api/v1/auth/register", `{invalid json}`)

@@ -164,6 +164,24 @@ func (r *UserRepo) CountByTrial(ctx context.Context) (int, error) {
 	return int(count), nil
 }
 
+func (r *UserRepo) SetVerificationCode(ctx context.Context, id primitive.ObjectID, code string, expiresAt time.Time) error {
+	_, err := r.coll.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{
+		"verificationCode":       code,
+		"verificationExpiresAt":  expiresAt,
+		"updatedAt":              time.Now(),
+	}})
+	return err
+}
+
+func (r *UserRepo) VerifyEmail(ctx context.Context, id primitive.ObjectID) error {
+	_, err := r.coll.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{
+		"emailVerified":    true,
+		"verificationCode": "",
+		"updatedAt":        time.Now(),
+	}})
+	return err
+}
+
 func (r *UserRepo) FindActiveNonTrialUsers(ctx context.Context) ([]model.User, error) {
 	cursor, err := r.coll.Find(ctx, bson.M{
 		"subscriptionStatus": model.SubscriptionStatusActive,

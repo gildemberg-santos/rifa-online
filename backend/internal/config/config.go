@@ -21,6 +21,11 @@ type Config struct {
 	AppURL             string
 	DataEncryptionKey  string
 	BlindIndexKey      string
+	SMTPHost           string
+	SMTPPort           int
+	SMTPUser           string
+	SMTPPass           string
+	SMTPFrom           string
 	LogLevel           slog.Level
 	LogFormat          string
 }
@@ -54,6 +59,11 @@ func Load() *Config {
 		InfinitePayBaseURL: infinitePayBaseURL,
 		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
 		AppURL:             getEnv("APP_URL", "http://localhost:8080"),
+		SMTPHost:           getEnv("SMTP_HOST", ""),
+		SMTPPort:           getEnvInt("SMTP_PORT", 587),
+		SMTPUser:           getEnv("SMTP_USER", ""),
+		SMTPPass:           getEnv("SMTP_PASS", ""),
+		SMTPFrom:           getEnv("SMTP_FROM", ""),
 		DataEncryptionKey:  getEnv("DATA_ENCRYPTION_KEY", ""),
 		BlindIndexKey:      getEnv("BLIND_INDEX_KEY", ""),
 		LogLevel:           level,

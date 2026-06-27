@@ -2,8 +2,12 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
+	"fmt"
+	"math/big"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"go.mongodb.org/mongo-driver/bson"
@@ -12,6 +16,7 @@ import (
 
 	"github.com/user/rifa-online/internal/auth"
 	"github.com/user/rifa-online/internal/config"
+	"github.com/user/rifa-online/internal/mailer"
 	"github.com/user/rifa-online/internal/model"
 	"github.com/user/rifa-online/internal/repository"
 )
@@ -20,15 +25,19 @@ var (
 	ErrEmailAlreadyRegistered = errors.New("email already registered")
 	ErrInvalidCredentials     = errors.New("invalid credentials")
 	ErrUserNotFound           = errors.New("user not found")
+	ErrEmailNotVerified       = errors.New("email not verified")
+	ErrInvalidCode            = errors.New("invalid verification code")
+	ErrCodeExpired            = errors.New("verification code expired")
 )
 
 type AuthService struct {
 	userRepo *repository.UserRepo
+	mail     *mailer.Mailer
 	cfg      *config.Config
 }
 
-func NewAuthService(userRepo *repository.UserRepo, cfg *config.Config) *AuthService {
-	return &AuthService{userRepo: userRepo, cfg: cfg}
+func NewAuthService(userRepo *repository.UserRepo, mail *mailer.Mailer, cfg *config.Config) *AuthService {
+	return &AuthService{userRepo: userRepo, mail: mail, cfg: cfg}
 }
 
 type RegisterInput struct {
@@ -84,6 +93,29 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*AuthR
 
 	user.Name = input.Name
 
+	if s.mail.Enabled() {
+		code, err := generateCode()
+		if err != nil {
+			return nil, err
+		}
+
+		expiresAt := time.Now().Add(30 * time.Minute)
+		if err := s.userRepo.SetVerificationCode(ctx, user.ID, code, expiresAt); err != nil {
+			return nil, err
+		}
+
+		if err := s.mail.SendVerificationCode(input.Email, code); err != nil {
+			return nil, fmt.Errorf("failed to send verification email: %w", err)
+		}
+
+		return &AuthResult{User: user}, nil
+	}
+
+	if err := s.userRepo.VerifyEmail(ctx, user.ID); err != nil {
+		return nil, err
+	}
+	user.EmailVerified = true
+
 	accessToken, err := auth.GenerateAccessToken(user.ID, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, err
@@ -94,11 +126,97 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*AuthR
 		return nil, err
 	}
 
-	return &AuthResult{
-		User:         user,
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}, nil
+	return &AuthResult{User: user, AccessToken: accessToken, RefreshToken: refreshToken}, nil
+}
+
+func (s *AuthService) VerifyEmail(ctx context.Context, email, code string) (*AuthResult, error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+
+	if email == "" || code == "" {
+		return nil, errors.New("email and code are required")
+	}
+
+	user, err := s.userRepo.FindByEmail(ctx, email)
+	if err != nil {
+		return nil, ErrInvalidCode
+	}
+
+	if user.EmailVerified {
+		accessToken, err := auth.GenerateAccessToken(user.ID, s.cfg.JWTSecret)
+		if err != nil {
+			return nil, err
+		}
+		refreshToken, err := auth.GenerateRefreshToken(user.ID, s.cfg.JWTSecret)
+		if err != nil {
+			return nil, err
+		}
+		return &AuthResult{User: user, AccessToken: accessToken, RefreshToken: refreshToken}, nil
+	}
+
+	if user.VerificationCode != code {
+		return nil, ErrInvalidCode
+	}
+
+	if user.VerificationExpiresAt != nil && time.Now().After(*user.VerificationExpiresAt) {
+		return nil, ErrCodeExpired
+	}
+
+	if err := s.userRepo.VerifyEmail(ctx, user.ID); err != nil {
+		return nil, err
+	}
+
+	user.EmailVerified = true
+
+	accessToken, err := auth.GenerateAccessToken(user.ID, s.cfg.JWTSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := auth.GenerateRefreshToken(user.ID, s.cfg.JWTSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthResult{User: user, AccessToken: accessToken, RefreshToken: refreshToken}, nil
+}
+
+func (s *AuthService) ResendCode(ctx context.Context, email string) error {
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email == "" {
+		return errors.New("email is required")
+	}
+
+	user, err := s.userRepo.FindByEmail(ctx, email)
+	if err != nil {
+		return nil
+	}
+
+	if user.EmailVerified {
+		return nil
+	}
+
+	code, err := generateCode()
+	if err != nil {
+		return err
+	}
+
+	expiresAt := time.Now().Add(30 * time.Minute)
+	if err := s.userRepo.SetVerificationCode(ctx, user.ID, code, expiresAt); err != nil {
+		return err
+	}
+
+	if s.mail.Enabled() {
+		return s.mail.SendVerificationCode(email, code)
+	}
+	return nil
+}
+
+func generateCode() (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
 type LoginInput struct {
@@ -108,6 +226,11 @@ type LoginInput struct {
 
 func (s *AuthService) Login(ctx context.Context, input LoginInput) (*AuthResult, error) {
 	input.Email = strings.TrimSpace(strings.ToLower(input.Email))
+	input.Password = strings.TrimSpace(input.Password)
+
+	if input.Email == "" || input.Password == "" {
+		return nil, ErrInvalidCredentials
+	}
 
 	user, err := s.userRepo.FindByEmail(ctx, input.Email)
 	if err != nil {
@@ -119,6 +242,10 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*AuthResult,
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)); err != nil {
 		return nil, ErrInvalidCredentials
+	}
+
+	if !user.EmailVerified {
+		return nil, ErrEmailNotVerified
 	}
 
 	accessToken, err := auth.GenerateAccessToken(user.ID, s.cfg.JWTSecret)

@@ -34,6 +34,9 @@ type User struct {
 	SubscriptionExpiresAt *time.Time          `bson:"subscriptionExpiresAt,omitempty" json:"subscriptionExpiresAt,omitempty"`
 	SubscriptionIsTrial  bool                `bson:"subscriptionIsTrial" json:"subscriptionIsTrial"`
 	HasSubscriptionBefore bool               `bson:"hasSubscriptionBefore" json:"hasSubscriptionBefore"`
+	EmailVerified        bool                `bson:"emailVerified" json:"emailVerified"`
+	VerificationCode     string              `bson:"verificationCode,omitempty" json:"-"`
+	VerificationExpiresAt *time.Time          `bson:"verificationExpiresAt,omitempty" json:"-"`
 	CreatedAt            time.Time           `bson:"createdAt" json:"createdAt"`
 	UpdatedAt            time.Time           `bson:"updatedAt" json:"updatedAt"`
 }
