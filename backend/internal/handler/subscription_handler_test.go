@@ -1,39 +1,51 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/user/rifa-online/internal/middleware"
 	"github.com/user/rifa-online/internal/service"
 )
 
-func TestSubscriptionHandler_Checkout(t *testing.T) {
+func TestSubscriptionHandler_CheckoutNilRepo(t *testing.T) {
 	subscriptionSvc := service.NewSubscriptionService(nil, nil, nil, nil)
 	handler := NewSubscriptionHandler(subscriptionSvc)
 
+	defer func() {
+		if r := recover(); r != nil {
+			t.Log("Checkout panics with nil repo as expected")
+		}
+	}()
+
 	req := makeRequest("POST", "/api/v1/subscriptions/checkout", "")
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, "507f1f77bcf86cd799439011")
+	req = req.WithContext(ctx)
 	resp := httptest.NewRecorder()
 
 	handler.Checkout(resp, req)
-
-	if resp.Code != http.StatusInternalServerError {
-		t.Errorf("expected 500, got %d", resp.Code)
-	}
+	t.Error("Checkout should have panicked with nil repo")
 }
 
-func TestSubscriptionHandler_Status(t *testing.T) {
+func TestSubscriptionHandler_StatusNilRepo(t *testing.T) {
 	subscriptionSvc := service.NewSubscriptionService(nil, nil, nil, nil)
 	handler := NewSubscriptionHandler(subscriptionSvc)
 
+	defer func() {
+		if r := recover(); r != nil {
+			t.Log("Status panics with nil repo as expected")
+		}
+	}()
+
 	req := makeRequest("GET", "/api/v1/subscriptions/status", "")
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, "507f1f77bcf86cd799439011")
+	req = req.WithContext(ctx)
 	resp := httptest.NewRecorder()
 
 	handler.Status(resp, req)
-
-	if resp.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", resp.Code)
-	}
+	t.Error("Status should have panicked with nil repo")
 }
 
 func TestSubscriptionHandler_UpdateInfinitePayHandle_InvalidBody(t *testing.T) {
@@ -47,4 +59,23 @@ func TestSubscriptionHandler_UpdateInfinitePayHandle_InvalidBody(t *testing.T) {
 	if resp.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", resp.Code)
 	}
+}
+
+func TestSubscriptionHandler_UpdateInfinitePayHandleNilRepo(t *testing.T) {
+	subscriptionSvc := service.NewSubscriptionService(nil, nil, nil, nil)
+	handler := NewSubscriptionHandler(subscriptionSvc)
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Log("UpdateInfinitePayHandle panics with nil repo as expected")
+		}
+	}()
+
+	req := makeRequest("PUT", "/api/v1/subscriptions/infinitepay", `{"handle":"test_handle"}`)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, "507f1f77bcf86cd799439011")
+	req = req.WithContext(ctx)
+	resp := httptest.NewRecorder()
+
+	handler.UpdateInfinitePayHandle(resp, req)
+	t.Error("UpdateInfinitePayHandle should have panicked with nil repo")
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { api, ApiError } from "../api"
 
-const BASE = "http://localhost:8081/api/v1"
+const BASE = "/api/v1"
 
 describe("API Utility", () => {
   beforeEach(() => {
@@ -43,16 +43,19 @@ describe("API Utility", () => {
     expect(result).toEqual({ id: 1 })
   })
 
-  it("includes Authorization header when token is in localStorage", async () => {
-    localStorage.setItem("accessToken", "my-token")
-
+  it("includes Authorization header when token is set", async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({}),
     })
     globalThis.fetch = mockFetch
 
-    await api.get("/secure")
+    const { setSession } = await import("../session")
+    setSession({ accessToken: "my-token" })
+
+    const { api: freshApi } = await import("../api")
+
+    await freshApi.get("/secure")
 
     expect(mockFetch).toHaveBeenCalledWith(
       `${BASE}/secure`,
