@@ -17,6 +17,7 @@
             <li><router-link to="/" class="hover:text-white transition-colors">Início</router-link></li>
             <li><router-link to="/ajuda" class="hover:text-white transition-colors">Central de Ajuda</router-link></li>
             <li><router-link to="/login" class="hover:text-white transition-colors">Entrar</router-link></li>
+            <li><a href="https://qa.leadster.com.br/l/ZQIM7IWz" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">Leadster</a></li>
           </ul>
         </div>
         <div>
