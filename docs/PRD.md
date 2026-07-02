@@ -34,10 +34,11 @@ Sistema web (SaaS) para gerenciamento de rifas online com pagamento via **Infini
 
 | ID | Funcionalidade | Prioridade |
 |----|---------------|------------|
-| F-01 | Cadastro de organizador (nome, email, senha) com trial de 7 dias | Alta |
-| F-02 | Login com JWT (access + refresh) | Alta |
+| F-01 | Cadastro de organizador (nome, email, senha) com trial de 7 dias e verificação de email via código de 6 dígitos | Alta |
+| F-02 | Login com JWT (access + refresh); bloqueado até email ser verificado | Alta |
 | F-03 | Refresh de token | Alta |
 | F-04 | Perfil do usuário (nome, telefone, handle InfinitePay) | Alta |
+| F-25 | Reenvio de código de verificação | Baixa |
 
 ### 5.2 Assinatura (SaaS)
 

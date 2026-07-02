@@ -14,6 +14,7 @@
 | ODM | MongoDB Go Driver | v1 | Driver oficial |
 | Pagamento | InfinitePay Checkout API | — | Checkout hospedado por `handle`, PIX+cartão |
 | Cache | Redis | 7+ | Locking de números no checkout |
+| Email | net/smtp | stdlib | Envio de código de verificação (SMTP) |
 
 ## 2. Arquitetura
 
@@ -34,6 +35,7 @@
 │  ┌────▼───────────▼──────────────▼────────┐   │
 │  │          Service Layer                 │   │
 │  │  auth · raffle · payment · subscription│   │
+│  │  mailer                                │   │
 │  └────┬───────────┬──────────────┬────────┘   │
 │       │           │              │            │
 │  ┌────▼────┐ ┌────▼────┐  ┌──────▼──────┐     │
@@ -46,7 +48,7 @@
       InfinitePay ─┘◄───────────────┘
 ```
 
-Camadas: `handler` (HTTP) → `service` (regra de negócio) → `repository` (MongoDB) e `pkg/infinitepay` (cliente HTTP). Redis usado só para lock de reserva.
+Camadas: `handler` (HTTP) → `service` (regra de negócio) → `repository` (MongoDB), `mailer` (SMTP) e `pkg/infinitepay` (cliente HTTP). Redis usado só para lock de reserva.
 
 ## 3. Modelagem de Dados (MongoDB)
 
@@ -65,6 +67,9 @@ Camadas: `handler` (HTTP) → `service` (regra de negócio) → `repository` (Mo
   "subscriptionExpiresAt": "ISODate | null",
   "subscriptionIsTrial": "boolean",
   "hasSubscriptionBefore": "boolean",
+  "emailVerified": "boolean",
+  "verificationCode": "string | null (código de 6 dígitos, hash)",
+  "verificationExpiresAt": "ISODate | null",
   "createdAt": "ISODate",
   "updatedAt": "ISODate"
 }
@@ -163,8 +168,10 @@ Base: `/api/v1`. Rotas marcadas (auth) exigem JWT; (admin) exigem `role=ADMIN`.
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| POST | /auth/register | Cadastro (inicia trial 7d) |
-| POST | /auth/login | Login (JWT) |
+| POST | /auth/register | Cadastro (inicia trial 7d). Se SMTP ativo, retorna `{ emailSent, message }` sem tokens; se inativo, já nasce verificado e retorna tokens |
+| POST | /auth/verify-email | Validar código de verificação (6 dígitos). Retorna tokens JWT |
+| POST | /auth/resend-code | Reenviar código de verificação por e-mail |
+| POST | /auth/login | Login (JWT). Retorna 403 se email não verificado |
 | POST | /auth/refresh | Renovar access token |
 
 ### 4.2 Perfil (auth)
@@ -206,7 +213,7 @@ Base: `/api/v1`. Rotas marcadas (auth) exigem JWT; (admin) exigem `role=ADMIN`.
 | GET | /payments/my | Meus pagamentos (por telefone) |
 | GET | /payments/{id} | Detalhe do pagamento |
 | GET | /payments/my/tickets | Meus tickets (por telefone) |
-| POST | /payments/{id}/confirm | Confirmar pagamento (polling InfinitePay) (auth) |
+| POST | /payments/{id}/confirm | Confirmar pagamento (polling InfinitePay) |
 
 ### 4.6 Dashboard / Admin
 
@@ -218,6 +225,7 @@ Base: `/api/v1`. Rotas marcadas (auth) exigem JWT; (admin) exigem `role=ADMIN`.
 | PUT | /admin/users/{id}/subscription | Alterar assinatura do usuário (admin) |
 | GET | /admin/raffles | Listar rifas (admin) |
 | GET | /admin/stats | Estatísticas globais (admin) |
+| POST | /admin/confirm-payment/{id} | Confirmar pagamento manualmente (admin) — marca como PAID sem consultar InfinitePay |
 | GET | /admin/contact-messages | Mensagens de contato recebidas (admin) |
 
 ### 4.7 Contato
@@ -254,13 +262,21 @@ InfinitePay usa **checkout hospedado por `handle`** (a `$tag` do recebedor). Nã
 
 3. Cliente paga (PIX/Cartão)
 
-4. Confirmação por dois caminhos (idempotentes):
-   a) Webhook: POST /api/v1/webhooks/infinitepay
-      Payload: invoice_slug, order_nsu, transaction_nsu, amount, paid_amount, ...
-   b) Polling: POST /api/v1/payments/{id}/confirm  (CheckPayment via order_nsu)
-   - Verifica idempotência (webhook_events.eventId)
-   - payment.status = PAID, tickets.status = PAID (buyerPhone)
-   - Libera locks do Redis
+ 4. Confirmação por dois caminhos (idempotentes):
+    a) Webhook: POST /api/v1/webhooks/infinitepay
+       Payload: invoice_slug, order_nsu, transaction_nsu, amount, paid_amount, ...
+       Webhook URL registrada no dashboard InfinitePay apontando para `{APP_URL}/api/v1/webhooks/infinitepay`
+    b) Polling: POST /api/v1/payments/{id}/confirm  (CheckPayment via order_nsu e transaction_nsu)
+       Endpoint público (sem auth) — chamado pelo PaymentSuccess.vue ao receber redirect do InfinitePay
+    - Verifica idempotência (webhook_events.eventId)
+    - payment.status = PAID, tickets.status = PAID (buyerPhone)
+    - Libera locks do Redis
+
+ 5. Retry automático: goroutine `retryPendingPayments` roda a cada 2min, busca payments RAFFLE com
+    status PENDING e tenta confirmar via InfinitePay
+
+ 6. Admin pode confirmar manualmente: POST /admin/confirm-payment/{id} marca como PAID sem
+    consultar InfinitePay (útil quando webhook não chega)
 
 5. Frontend exibe confirmação (PaymentSuccess / PaymentPending)
 ```
@@ -275,6 +291,19 @@ InfinitePay usa **checkout hospedado por `handle`** (a `$tag` do recebedor). Nã
 ### 5.3 Assinatura
 
 `POST /subscription/checkout` cria um payment `type=SUBSCRIPTION` (`amount=1000`) e um checkout InfinitePay para o **handle da plataforma**. Confirmação ativa a assinatura (`subscriptionStatus=ACTIVE`, define `subscriptionExpiresAt`). Em dev, `POST /subscription/dev-checkout` ativa sem pagar.
+
+## 6. Tratamento de Concorrência
+
+### 5.4 Retry Automático
+
+Uma goroutine em `main.go` executa `retryPendingPayments` a cada **2 minutos**:
+1. Busca payments RAFFLE com status `PENDING`
+2. Para cada um, chama `CheckPayment` na InfinitePay
+3. Se pago, atualiza payment e tickets
+
+### 5.5 Confirmação Manual (Admin)
+
+`POST /admin/confirm-payment/{id}` — útil para casos onde o webhook não chegou e o `CheckPayment` falhou. Marca o payment como `PAID` sem consultar a InfinitePay.
 
 ## 6. Tratamento de Concorrência
 
@@ -296,6 +325,8 @@ Solução:
 - Idempotência de webhook via `webhook_events.eventId`
 - Validação de limites de tamanho de campos (backend + `maxlength` no frontend)
 - HTTPS obrigatório em produção
+- Sorteio usa `crypto/rand` (não `time.Now().UnixNano()`) para resultado imparcial
+- Código de verificação de email: 6 dígitos, expira em 30min, hash no banco
 
 ## 8. Frontend (Vue 3)
 
@@ -321,11 +352,11 @@ Solução:
 
 ### 8.2 Componentes (`src/components`)
 
-`NumberGrid.vue`, `RaffleCard.vue`, `Alert.vue`, `LoadingSpinner.vue`. Layout em `src/layouts` (Navbar, Footer).
+`NumberGrid.vue`, `RaffleCard.vue`, `Alert.vue`, `LoadingSpinner.vue`, `NotificationBar.vue` (toast global com transição). Layout em `src/layouts` (Navbar, Footer). Estados globais de toast via `useNotification` composable.
 
 ### 8.3 Estado Global (Pinia, `src/stores`)
 
-- `useAuthStore` — autenticação (restaura usuário do localStorage no refresh)
+- `useAuthStore` — autenticação (restaura usuário do localStorage no refresh). Métodos: `register`, `login`, `verifyEmail`, `resendCode`, `logout`, `refreshToken`
 - `useRaffleStore` — dados de rifas
 - `usePaymentStore` — pagamentos
 
@@ -343,6 +374,12 @@ JWT_SECRET=change-me
 INFINITEPAY_HANDLE=$sua_tag    # handle da plataforma (assinaturas)
 INFINITEPAY_BASE_URL=https://api.checkout.infinitepay.io
 FRONTEND_URL=http://localhost:5173
+APP_URL=http://localhost:8080   # URL do backend (webhook_url no checkout)
+SMTP_HOST=                      # Vazio = email verification desligado
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
 LOG_LEVEL=info                 # debug | info | warn | error
 LOG_FORMAT=text                # text | json
 ```
@@ -375,6 +412,15 @@ Participantes compram sem conta. O **telefone** (`buyerPhone`) identifica o comp
 
 ### ADR-007: Modelo SaaS com trial
 Organizadores assinam (R$10/mês via InfinitePay) com trial de 7 dias. Middleware bloqueia criação de rifa sem plano ativo; admin faz bypass.
+
+### ADR-008: Email verification condicional
+Se SMTP configurado, `Register` não retorna tokens — usuário precisa verificar email com código de 6 dígitos (30min). Se SMTP não configurado, conta já nasce verificada (compatibilidade dev/local). `Login` retorna 403 se email não verificado.
+
+### ADR-009: Preço unitário no checkout InfinitePay
+A InfinitePay multiplica `Price × Quantity` automaticamente. O sistema envia `Price = raffle.TicketPrice` (unitário) em vez de `totalAmount`, evitando cobrança triplicada.
+
+### ADR-010: Retry automático de pagamentos pendentes
+Goroutine a cada 2min busca payments RAFFLE PENDING e tenta confirmar via InfinitePay. Garante que pagamentos não sejam perdidos se o webhook ou redirect falharem.
 
 ## 11. Infraestrutura
 

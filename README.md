@@ -26,6 +26,7 @@ realizar sorteios; participantes compram números sem precisar de conta.
 │   │   ├── model/           # modelos de dados
 │   │   ├── middleware/      # auth, admin, assinatura, logging
 │   │   ├── migrations/      # criação de índices
+│   │   ├── mailer/          # envio de e-mail (SMTP)
 │   │   └── config/          # carregamento de env
 │   └── pkg/infinitepay/     # cliente HTTP da InfinitePay
 ├── frontend/                # SPA em Vue 3
@@ -100,7 +101,13 @@ Usuário admin padrão é criado automaticamente: **admin@email.com** / **123456
 | `APP_ENV` | `development` | `development` habilita rotas de dev (ex.: `dev-checkout`) |
 | `INFINITEPAY_HANDLE` | _(vazio)_ | Handle da plataforma (recebe as assinaturas) |
 | `INFINITEPAY_BASE_URL` | `https://api.checkout.infinitepay.io` | Base da API InfinitePay |
-| `FRONTEND_URL` | `http://localhost:5173` | URL do front (CORS + base do `webhook_url`) |
+| `FRONTEND_URL` | `http://localhost:5173` | URL do front (CORS + redirect após pagamento) |
+| `APP_URL` | `http://localhost:8080` | URL do backend (usada no `webhook_url` do checkout) |
+| `SMTP_HOST` | _(vazio)_ | Host SMTP para envio de e-mail. Vazio = verificação de email desligada |
+| `SMTP_PORT` | `587` | Porta SMTP |
+| `SMTP_USER` | _(vazio)_ | Usuário SMTP |
+| `SMTP_PASS` | _(vazio)_ | Senha SMTP |
+| `SMTP_FROM` | _(vazio)_ | Remetente dos e-mails |
 | `DATA_ENCRYPTION_KEY` | _(vazio)_ | Chave de criptografia de campos sensíveis em repouso (AES-256-GCM). Vazio = sem criptografia |
 | `BLIND_INDEX_KEY` | _(vazio)_ | Chave do índice cego (HMAC) para buscas sobre campos criptografados |
 | `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
@@ -127,6 +134,7 @@ O frontend usa `VITE_API_URL` (opcional) para apontar a base da API; vazio = mes
 ## 🔌 API
 
 Base: `/api/v1`. Autenticação por **JWT** (access + refresh); rotas admin exigem `role=ADMIN`.
+Novas contas precisam verificar o email antes de receber tokens (quando SMTP configurado).
 
 A **referência completa de endpoints** (auth, perfil, assinatura, rifas, pagamentos, dashboard,
 admin, contato e webhooks) está em [`docs/TECH_SPEC.md` §4](docs/TECH_SPEC.md). A **integração de
@@ -157,5 +165,9 @@ pagamento** (criação de checkout, webhook, `payment_check`, ciclo de vida) est
 - **Pagamentos:** a plataforma **não custodia valores** nem **armazena dados de cartão** — tudo é
   processado pela InfinitePay e roteado pelo `handle` do organizador.
 - **Confirmação idempotente:** webhook + polling (`payment_check`), com deduplicação por `eventId`.
+- **Email verification:** contas novas precisam validar email com código de 6 dígitos (30min exp).
+  Se SMTP não configurado, conta já nasce verificada (compatibilidade dev).
+- **Sorteio criptográfico:** usa `crypto/rand` em vez de `time.Now().UnixNano()` para garantir
+  aleatoriedade imparcial no sorteio do vencedor.
 
 Para detalhes, veja [`docs/TECH_SPEC.md`](docs/TECH_SPEC.md).
