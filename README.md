@@ -1,42 +1,43 @@
 # Rifa Online
 
-Plataforma SaaS para **criação e gestão de rifas online**, com pagamento via PIX/cartão pela
-[InfinitePay](https://www.infinitepay.io/). Organizadores assinam o serviço para criar rifas e
-realizar sorteios; participantes compram números sem precisar de conta.
+[Português](README.pt-BR.md)
+
+A SaaS platform for **creating and running online raffles**, with PIX and credit card payments through [InfinitePay](https://www.infinitepay.io/). Organizers subscribe to the service to create raffles and run draws; participants buy numbers without creating an account.
 
 - **Frontend:** Vue 3 + TypeScript + Vite + Tailwind CSS
 - **Backend:** Go (Chi) + MongoDB + Redis
-- **Pagamentos:** InfinitePay Checkout (PIX e cartão)
+- **Payments:** InfinitePay Checkout (PIX and card)
 
-> Documentação de produto e técnica detalhada em [`docs/`](#-documentação). Tutoriais de uso para
-> o usuário final ficam dentro do app, na **Central de Ajuda** (`/ajuda`).
+![Architecture](docs/images/architecture.png)
+
+> Detailed product and technical documentation lives in [`docs/`](#documentation) (in Portuguese). End-user tutorials live inside the app, in the **Help Center** (`/ajuda`).
 
 ---
 
-## 📁 Estrutura do repositório
+## Repository structure
 
 ```
 .
-├── backend/                 # API em Go
-│   ├── cmd/server/main.go   # ponto de entrada (rotas, bootstrap)
+├── backend/                 # Go API
+│   ├── cmd/server/main.go   # entry point (routes, bootstrap)
 │   ├── internal/
-│   │   ├── handler/         # camada HTTP
-│   │   ├── service/         # regras de negócio
-│   │   ├── repository/      # acesso ao MongoDB
-│   │   ├── model/           # modelos de dados
-│   │   ├── middleware/      # auth, admin, assinatura, logging
-│   │   ├── migrations/      # criação de índices
-│   │   ├── mailer/          # envio de e-mail (SMTP)
-│   │   └── config/          # carregamento de env
-│   └── pkg/infinitepay/     # cliente HTTP da InfinitePay
-├── frontend/                # SPA em Vue 3
+│   │   ├── handler/         # HTTP layer
+│   │   ├── service/         # business rules
+│   │   ├── repository/      # MongoDB access
+│   │   ├── model/           # data models
+│   │   ├── middleware/      # auth, admin, subscription, logging
+│   │   ├── migrations/      # index creation
+│   │   ├── mailer/          # email sending (SMTP)
+│   │   └── config/          # env loading
+│   └── pkg/infinitepay/     # InfinitePay HTTP client
+├── frontend/                # Vue 3 SPA
 │   └── src/
-│       ├── pages/           # telas (inclui legal/ e Central de Ajuda)
-│       ├── components/      # componentes reutilizáveis
+│       ├── pages/           # screens (including legal/ and the Help Center)
+│       ├── components/      # reusable components
 │       ├── layouts/         # Navbar, Footer
-│       ├── data/help.ts     # conteúdo da Central de Ajuda
+│       ├── data/help.ts     # Help Center content
 │       ├── stores/          # Pinia
-│       └── router/          # rotas
+│       └── router/          # routes
 ├── docs/                    # PRD, Tech Spec, Tasks
 ├── docker-compose.yml
 └── Makefile
@@ -44,36 +45,34 @@ realizar sorteios; participantes compram números sem precisar de conta.
 
 ---
 
-## ✅ Pré-requisitos
+## Requirements
 
 - **Go** 1.23+
-- **Node.js** 20+ e npm
-- **Docker** + Docker Compose (para MongoDB/Redis ou para subir tudo)
+- **Node.js** 20+ and npm
+- **Docker** + Docker Compose (for MongoDB/Redis or to run everything)
 
 ---
 
-## 🚀 Como rodar
+## Running
 
-### Opção A — Tudo via Docker (mais simples)
+### Option A — Everything in Docker (simplest)
 
 ```bash
-cp .env.example .env          # ajuste INFINITEPAY_HANDLE e JWT_SECRET
-make docker-up                # sobe mongodb, redis, backend e frontend
+cp .env.example .env          # set INFINITEPAY_HANDLE and JWT_SECRET
+make docker-up                # starts mongodb, redis, backend and frontend
 ```
 
 - Frontend: http://localhost:5173
 - Backend:  http://localhost:8080  (health: `/health`)
 
-### Opção B — Desenvolvimento local (backend e frontend nativos)
+### Option B — Local development (native backend and frontend)
 
 ```bash
-make setup                    # copia backend/.env, instala deps do front, go mod tidy
-make db-up                    # sobe apenas mongodb e redis via Docker
+make setup                    # copies backend/.env, installs frontend deps, go mod tidy
+make db-up                    # starts only mongodb and redis in Docker
 ```
 
-> ⚠️ **Atenção às portas:** o `docker-compose` expõe o MongoDB em **27018** e o Redis em **6380**
-> no host (para não conflitar com instâncias locais). Ao rodar o backend nativo, ajuste o
-> `backend/.env`:
+> ⚠️ **Ports:** `docker-compose` exposes MongoDB on **27018** and Redis on **6380** on the host (to avoid clashing with local instances). When running the backend natively, adjust `backend/.env`:
 >
 > ```env
 > MONGODB_URI=mongodb://localhost:27018
@@ -81,93 +80,85 @@ make db-up                    # sobe apenas mongodb e redis via Docker
 > ```
 
 ```bash
-make dev-backend              # API em :8080 (ou `make dev-backend-hot` com air)
-make dev-frontend             # Vite em :5173
+make dev-backend              # API on :8080 (or `make dev-backend-hot` with air)
+make dev-frontend             # Vite on :5173
 ```
 
-Usuário admin padrão é criado automaticamente: **admin@email.com** / **123456** (apenas dev).
+A default admin user is created automatically: **admin@email.com** / **123456** (development only).
 
 ---
 
-## 🔐 Variáveis de ambiente (backend)
+## Environment variables (backend)
 
-| Variável | Padrão | Descrição |
-|----------|--------|-----------|
-| `PORT` | `8080` | Porta da API |
-| `MONGODB_URI` | `mongodb://localhost:27017` | Conexão MongoDB |
-| `MONGODB_DB_NAME` | `rifaonline` | Nome do banco |
-| `REDIS_URI` | `redis://localhost:6379` | Conexão Redis (lock de reservas) |
-| `JWT_SECRET` | `change-me` | Segredo dos tokens JWT — **troque em produção** |
-| `APP_ENV` | `development` | `development` habilita rotas de dev (ex.: `dev-checkout`) |
-| `INFINITEPAY_HANDLE` | _(vazio)_ | Handle da plataforma (recebe as assinaturas) |
-| `INFINITEPAY_BASE_URL` | `https://api.checkout.infinitepay.io` | Base da API InfinitePay |
-| `FRONTEND_URL` | `http://localhost:5173` | URL do front (CORS + redirect após pagamento) |
-| `APP_URL` | `http://localhost:8080` | URL do backend (usada no `webhook_url` do checkout) |
-| `SMTP_HOST` | _(vazio)_ | Host SMTP para envio de e-mail. Vazio = verificação de email desligada |
-| `SMTP_PORT` | `587` | Porta SMTP |
-| `SMTP_USER` | _(vazio)_ | Usuário SMTP |
-| `SMTP_PASS` | _(vazio)_ | Senha SMTP |
-| `SMTP_FROM` | _(vazio)_ | Remetente dos e-mails |
-| `DATA_ENCRYPTION_KEY` | _(vazio)_ | Chave de criptografia de campos sensíveis em repouso (AES-256-GCM). Vazio = sem criptografia |
-| `BLIND_INDEX_KEY` | _(vazio)_ | Chave do índice cego (HMAC) para buscas sobre campos criptografados |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | API port |
+| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection |
+| `MONGODB_DB_NAME` | `rifaonline` | Database name |
+| `REDIS_URI` | `redis://localhost:6379` | Redis connection (reservation locks) |
+| `JWT_SECRET` | `change-me` | JWT signing secret — **change it in production** |
+| `APP_ENV` | `development` | `development` enables dev-only routes (e.g. `dev-checkout`) |
+| `INFINITEPAY_HANDLE` | _(empty)_ | Platform handle (receives subscriptions) |
+| `INFINITEPAY_BASE_URL` | `https://api.checkout.infinitepay.io` | InfinitePay API base URL |
+| `FRONTEND_URL` | `http://localhost:5173` | Frontend URL (CORS + redirect after payment) |
+| `APP_URL` | `http://localhost:8080` | Backend URL (used as the checkout `webhook_url`) |
+| `SMTP_HOST` | _(empty)_ | SMTP host for email. Empty = email verification disabled |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_USER` | _(empty)_ | SMTP user |
+| `SMTP_PASS` | _(empty)_ | SMTP password |
+| `SMTP_FROM` | _(empty)_ | Sender address |
+| `DATA_ENCRYPTION_KEY` | _(empty)_ | Key for encrypting sensitive fields at rest (AES-256-GCM). Empty = no encryption |
+| `BLIND_INDEX_KEY` | _(empty)_ | Blind index (HMAC) key for searching encrypted fields |
 | `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
 | `LOG_FORMAT` | `text` | `text` \| `json` |
 
-O frontend usa `VITE_API_URL` (opcional) para apontar a base da API; vazio = mesma origem (`/api/v1`).
+The frontend uses `VITE_API_URL` (optional) as the API base; empty = same origin (`/api/v1`).
 
 ---
 
-## 🛠️ Comandos úteis (Makefile)
+## Useful commands (Makefile)
 
-| Comando | O que faz |
-|---------|-----------|
-| `make dev-backend` / `make dev-frontend` | Sobe backend / frontend em modo dev |
-| `make build` | Compila backend (`bin/server`) e frontend (`dist/`) |
-| `make test` | Roda testes de backend (`go test`) e frontend (`vitest`) |
+| Command | What it does |
+|---------|--------------|
+| `make dev-backend` / `make dev-frontend` | Run backend / frontend in dev mode |
+| `make build` | Build the backend (`bin/server`) and frontend (`dist/`) |
+| `make test` | Run backend (`go test`) and frontend (`vitest`) tests |
 | `make lint` | `go vet` + `vue-tsc`/eslint |
-| `make docker-up` / `make docker-down` | Sobe / derruba toda a stack |
-| `make db-up` / `make db-down` | Sobe / derruba apenas MongoDB e Redis |
-| `make clean` | Remove artefatos de build |
+| `make docker-up` / `make docker-down` | Start / stop the whole stack |
+| `make db-up` / `make db-down` | Start / stop only MongoDB and Redis |
+| `make clean` | Remove build artifacts |
 
 ---
 
-## 🔌 API
+## API
 
-Base: `/api/v1`. Autenticação por **JWT** (access + refresh); rotas admin exigem `role=ADMIN`.
-Novas contas precisam verificar o email antes de receber tokens (quando SMTP configurado).
+Base: `/api/v1`. Authentication with **JWT** (access + refresh); admin routes require `role=ADMIN`. New accounts must verify their email before receiving tokens (when SMTP is configured).
 
-A **referência completa de endpoints** (auth, perfil, assinatura, rifas, pagamentos, dashboard,
-admin, contato e webhooks) está em [`docs/TECH_SPEC.md` §4](docs/TECH_SPEC.md). A **integração de
-pagamento** (criação de checkout, webhook, `payment_check`, ciclo de vida) está em
-[`docs/TECH_SPEC.md` §5](docs/TECH_SPEC.md) e, em linguagem acessível, na Central de Ajuda
-(`/ajuda/integracao-pagamento-infinitepay`).
+The **full endpoint reference** (auth, profile, subscription, raffles, payments, dashboard, admin, contact and webhooks) is in [`docs/TECH_SPEC.md` §4](docs/TECH_SPEC.md). The **payment integration** (checkout creation, webhook, `payment_check`, lifecycle) is in [`docs/TECH_SPEC.md` §5](docs/TECH_SPEC.md) and, in plain language, in the Help Center (`/ajuda/integracao-pagamento-infinitepay`).
 
 ---
 
-## 📚 Documentação
+## Documentation
 
-### Técnica / produto (`docs/`)
-- [PRD.md](docs/PRD.md) — visão de produto, personas, funcionalidades e fluxos
-- [TECH_SPEC.md](docs/TECH_SPEC.md) — stack, arquitetura, modelagem de dados, API e integração
-- [TASKS.md](docs/TASKS.md) — acompanhamento de tarefas
+### Technical / product (`docs/`, in Portuguese)
+- [PRD.md](docs/PRD.md) — product vision, personas, features and flows
+- [TECH_SPEC.md](docs/TECH_SPEC.md) — stack, architecture, data model, API and integration
+- [TASKS.md](docs/TASKS.md) — task tracking
 
-### No aplicativo (usuário final)
-- **Central de Ajuda** — `/ajuda` (tutoriais por perfil: organizador, participante, admin, pagamentos)
-- **Contato** — `/contato` (canal de atendimento; mensagens lidas no painel admin)
-- **Documentos legais** — `/termos-de-uso`, `/politica-de-privacidade`, `/politica-de-cookies`, `/termo-do-organizador`
+### In the app (end users)
+- **Help Center** — `/ajuda` (tutorials per role: organizer, participant, admin, payments)
+- **Contact** — `/contato` (support channel; messages are read in the admin panel)
+- **Legal documents** — `/termos-de-uso`, `/politica-de-privacidade`, `/politica-de-cookies`, `/termo-do-organizador`
 
 ---
 
-## 🧱 Decisões de arquitetura (resumo)
+## Architecture decisions (summary)
 
-- **Camadas:** `handler` → `service` → `repository`; `pkg/infinitepay` isola o cliente de pagamento.
-- **Concorrência:** reserva de números via **lock no Redis** (`SetNX`, TTL) para evitar venda dupla.
-- **Pagamentos:** a plataforma **não custodia valores** nem **armazena dados de cartão** — tudo é
-  processado pela InfinitePay e roteado pelo `handle` do organizador.
-- **Confirmação idempotente:** webhook + polling (`payment_check`), com deduplicação por `eventId`.
-- **Email verification:** contas novas precisam validar email com código de 6 dígitos (30min exp).
-  Se SMTP não configurado, conta já nasce verificada (compatibilidade dev).
-- **Sorteio criptográfico:** usa `crypto/rand` em vez de `time.Now().UnixNano()` para garantir
-  aleatoriedade imparcial no sorteio do vencedor.
+- **Layers:** `handler` → `service` → `repository`; `pkg/infinitepay` isolates the payment client.
+- **Concurrency:** number reservations use a **Redis lock** (`SetNX`, TTL) to prevent double sales.
+- **Payments:** the platform **does not hold funds** or **store card data** — everything is processed by InfinitePay and routed by the organizer's `handle`.
+- **Idempotent confirmation:** webhook + polling (`payment_check`), deduplicated by `eventId`.
+- **Email verification:** new accounts confirm their email with a 6-digit code (30 min expiry). Without SMTP configured, accounts are created already verified (dev compatibility).
+- **Cryptographic draw:** uses `crypto/rand` instead of `time.Now().UnixNano()` for an unbiased winner draw.
 
-Para detalhes, veja [`docs/TECH_SPEC.md`](docs/TECH_SPEC.md).
+For details, see [`docs/TECH_SPEC.md`](docs/TECH_SPEC.md).
